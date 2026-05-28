@@ -9,7 +9,7 @@ from flask import Flask, request, jsonify
 from flask import send_from_directory
 import os
 
-app = Flask(__name__, static_folder=".")
+app = Flask(__name__, static_folder="static")
 
 # ─────────────────────────────────────────────
 # NÚCLEO DO AGENTE A*
