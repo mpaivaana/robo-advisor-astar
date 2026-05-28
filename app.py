@@ -138,9 +138,11 @@ def astar(
 
         for new_state, step_cost, h_new, from_i, to_i in expand_node(
             state, target_t, unit_pp, cost_per_unit, portfolio_value, heuristic_mode
-            print("  vizinho:", new_state, "de", state, "custo:", new_g)
         ):
             new_g = g + step_cost
+
+            print("  vizinho:", new_state, "de", state, "custo:", new_g)
+
             new_f = new_g + h_new
             action_label = (
                 f"Vende {unit_pp}% {asset_names[from_i]} → "
@@ -224,4 +226,4 @@ def compare():
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5050))
     print(f"\n🚀  Servidor rodando em http://localhost:{port}\n")
-    app.run(debug=False, port=port)
+    app.run(host="0.0.0.0", debug=False, port=port)
