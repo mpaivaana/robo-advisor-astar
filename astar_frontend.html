@@ -1,0 +1,1252 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Portfolio de Investimentos - Robo-Advisor com A* | SI702 UNICAMP</title>
+<link href="https://fonts.googleapis.com/css2?family=Red+Hat+Display:ital,wght@0,400;0,500;0,600;0,700;0,900;1,500&family=Red+Hat+Text:wght@300;400;500&family=Red+Hat+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0e1726;
+  --s1:#162340;
+  --s2:#1e304f;
+  --s3:#243760;
+  --bd:#2d4466;
+  --bd2:#4169a8;
+  --t1:#e4eeff;
+  --t2:#8aaad8;
+  --t3:#3f608a;
+  --accent:#5eb8fa;
+  --adim:rgba(94,184,250,.14);
+  --grn:#42d9a6;
+  --gdim:rgba(66,217,166,.12);
+  --red:#f47575;
+  --rdim:rgba(244,117,117,.12);
+  --yel:#f8c444;
+  --ydim:rgba(248,196,68,.12);
+  --rf:#2dd4bf;
+  --rfdim:rgba(45,212,191,.14);
+  --rv:#c084fc;
+  --rvdim:rgba(192,132,252,.14);
+  --r:8px;
+  --rl:12px;
+  --mono:'Red Hat Mono',monospace;
+  --sans:'Red Hat Text',sans-serif;
+  --disp:'Red Hat Display',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--t1);font-family:var(--sans);font-size:14px;line-height:1.5;min-height:100vh;overflow-x:hidden;}
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar{width:5px;height:5px;}
+::-webkit-scrollbar-track{background:var(--bg);}
+::-webkit-scrollbar-thumb{background:var(--bd);border-radius:3px;}
+::-webkit-scrollbar-thumb:hover{background:var(--bd2);}
+
+/* ── HEADER ── */
+header{
+  padding:14px 28px;
+  border-bottom:1px solid var(--bd);
+  display:flex;align-items:center;justify-content:space-between;
+  position:sticky;top:0;z-index:100;
+  background:rgba(14,23,38,.95);
+  backdrop-filter:blur(16px);
+}
+.logo{display:flex;align-items:center;gap:14px;}
+.logo-badge{
+  background:var(--accent);color:#0e1726;
+  font-family:var(--disp);font-weight:900;font-size:13px;
+  padding:6px 10px;border-radius:6px;letter-spacing:-.3px;
+}
+.logo-text{font-family:var(--disp);font-weight:700;font-size:17px;color:var(--t1);}
+.logo-sub{font-family:var(--mono);font-size:10px;color:var(--t3);margin-top:1px;}
+.header-badge{
+  font-family:var(--mono);font-size:10px;letter-spacing:.5px;
+  padding:5px 12px;border-radius:20px;
+  border:1px solid var(--bd);color:var(--t2);
+  background:var(--s1);
+}
+
+/* ── LAYOUT ── */
+.app{display:grid;grid-template-columns:380px 1fr;min-height:calc(100vh - 57px);}
+
+/* ── SIDEBAR ── */
+.sidebar{
+  border-right:1px solid var(--bd);
+  padding:20px 18px;
+  overflow-y:auto;
+  display:flex;flex-direction:column;gap:16px;
+  background:var(--s1);
+}
+
+/* Section label */
+.sec-label{
+  font-family:var(--disp);font-weight:700;font-size:10px;letter-spacing:1.8px;
+  text-transform:uppercase;color:var(--t3);
+  display:flex;align-items:center;gap:10px;margin-bottom:14px;
+}
+.sec-label::after{content:'';flex:1;height:1px;background:var(--bd);}
+
+/* Card */
+.card{
+  background:var(--s2);
+  border:1px solid var(--bd);
+  border-radius:var(--rl);
+  padding:16px;
+}
+.card+.card,.card+div{margin-top:0;}
+
+/* ── ASSET CARD ── */
+.asset-card{
+  background:var(--bg);
+  border:1px solid var(--bd);
+  border-radius:var(--r);
+  padding:13px;
+  margin-bottom:10px;
+  transition:border-color .2s;
+}
+.asset-card:hover{border-color:var(--bd2);}
+.asset-header{display:flex;align-items:center;gap:8px;margin-bottom:12px;}
+.asset-name-input{
+  flex:1;background:transparent;border:none;
+  font-family:var(--disp);font-weight:700;font-size:13px;color:var(--t1);
+  outline:none;padding:0;
+}
+.asset-name-input:focus{color:var(--accent);}
+.type-badge{
+  font-family:var(--mono);font-size:9px;font-weight:500;letter-spacing:.8px;
+  padding:3px 8px;border-radius:20px;cursor:pointer;
+  border:1px solid;transition:all .2s;user-select:none;flex-shrink:0;
+}
+.type-badge.rf{color:var(--rf);border-color:var(--rf);background:var(--rfdim);}
+.type-badge.rv{color:var(--rv);border-color:var(--rv);background:var(--rvdim);}
+.remove-btn{
+  background:none;border:none;cursor:pointer;
+  color:var(--t3);font-size:16px;line-height:1;padding:0 2px;
+  transition:color .15s;
+}
+.remove-btn:hover{color:var(--red);}
+
+/* Slider + Input row */
+.alloc-row{display:flex;flex-direction:column;gap:6px;margin-bottom:8px;}
+.alloc-label{
+  font-family:var(--mono);font-size:9px;letter-spacing:1.5px;
+  text-transform:uppercase;color:var(--t3);
+  display:flex;justify-content:space-between;align-items:center;
+}
+.alloc-label span{color:var(--t2);}
+.alloc-controls{display:flex;align-items:center;gap:8px;}
+input[type=range]{
+  flex:1;height:4px;-webkit-appearance:none;appearance:none;
+  background:var(--bd);border-radius:2px;outline:none;cursor:pointer;
+}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none;width:14px;height:14px;
+  border-radius:50%;background:var(--accent);cursor:pointer;
+  transition:transform .1s;
+}
+input[type=range]::-webkit-slider-thumb:hover{transform:scale(1.2);}
+.num-input{
+  width:52px;padding:4px 7px;
+  background:var(--s1);border:1px solid var(--bd);
+  border-radius:5px;color:var(--t1);
+  font-family:var(--mono);font-size:12px;text-align:center;
+  outline:none;transition:border-color .15s;
+}
+.num-input:focus{border-color:var(--accent);}
+.num-input.initial-inp{border-color:rgba(94,184,250,.3);}
+.num-input.target-inp{border-color:rgba(66,217,166,.3);}
+.pct-unit{font-family:var(--mono);font-size:10px;color:var(--t3);}
+
+.sum-row{
+  display:flex;justify-content:space-between;
+  font-family:var(--mono);font-size:10px;margin-top:4px;
+}
+.sum-ok{color:var(--grn);}
+.sum-err{color:var(--red);}
+
+/* Add asset btn */
+.add-asset-btn{
+  width:100%;padding:8px;margin-top:4px;
+  border:1px dashed var(--bd);border-radius:var(--r);
+  background:none;color:var(--t3);
+  font-family:var(--sans);font-size:12px;cursor:pointer;
+  transition:all .15s;
+}
+.add-asset-btn:hover{border-color:var(--accent);color:var(--accent);}
+
+/* Random market btn */
+.random-btn{
+  width:100%;padding:9px 14px;
+  border:1px solid var(--bd);border-radius:var(--r);
+  background:var(--s1);cursor:pointer;
+  font-family:var(--sans);font-size:12px;font-weight:500;
+  color:var(--t2);margin-top:8px;
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  transition:all .2s;
+}
+.random-btn:hover{border-color:var(--yel);color:var(--yel);background:var(--ydim);}
+.spin{display:inline-block;transition:transform .4s;}
+.random-btn:hover .spin{transform:rotate(180deg);}
+
+/* Form group */
+.fg{display:flex;flex-direction:column;gap:4px;margin-bottom:10px;}
+.fg label{font-family:var(--mono);font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--t3);}
+.fg input,.fg select{
+  background:var(--bg);border:1px solid var(--bd);border-radius:var(--r);
+  padding:8px 11px;color:var(--t1);
+  font-family:var(--mono);font-size:12px;outline:none;
+  transition:border-color .15s;
+}
+.fg input:focus,.fg select:focus{border-color:var(--accent);}
+.fg select option{background:var(--bg);}
+
+/* RF/RV Balance */
+.balance-row{display:flex;gap:6px;margin-bottom:12px;}
+.balance-preset{
+  flex:1;padding:9px 8px;text-align:center;
+  border:1px solid var(--bd);border-radius:var(--r);
+  background:var(--bg);cursor:pointer;
+  font-family:var(--mono);font-size:10px;color:var(--t2);
+  transition:all .2s;
+}
+.balance-preset:hover{border-color:var(--grn);color:var(--grn);background:var(--gdim);}
+.balance-preset.active{border-color:var(--grn);color:var(--grn);background:var(--gdim);}
+.split-row{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
+.split-lbl{font-family:var(--mono);font-size:10px;flex-shrink:0;}
+.rf-lbl{color:var(--rf);}
+.rv-lbl{color:var(--rv);}
+input[type=range].split-rng::-webkit-slider-thumb{background:var(--grn);}
+
+/* Heuristic toggle */
+.h-toggle{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px;}
+.h-btn{
+  padding:10px 8px;border:1px solid var(--bd);border-radius:var(--r);
+  background:var(--bg);cursor:pointer;text-align:center;
+  font-family:var(--mono);font-size:10px;color:var(--t3);
+  transition:all .2s;line-height:1.5;
+}
+.h-btn.adm{border-color:var(--grn);color:var(--grn);background:var(--gdim);}
+.h-btn.non{border-color:var(--red);color:var(--red);background:var(--rdim);}
+.h-info{font-family:var(--mono);font-size:9px;color:var(--t3);line-height:1.7;padding:8px 10px;background:var(--bg);border-radius:var(--r);}
+
+/* Action buttons */
+.run-btn{
+  width:100%;padding:12px;border-radius:var(--r);cursor:pointer;
+  font-family:var(--disp);font-size:13px;font-weight:700;letter-spacing:.3px;
+  transition:all .2s;margin-bottom:8px;position:relative;overflow:hidden;
+}
+.run-btn.primary{
+  border:1px solid var(--accent);background:var(--adim);color:var(--accent);
+}
+.run-btn.secondary{
+  border:1px solid var(--bd);background:var(--s1);color:var(--t2);
+}
+.run-btn.primary:hover{background:rgba(94,184,250,.22);box-shadow:0 0 24px rgba(94,184,250,.15);}
+.run-btn.secondary:hover{border-color:var(--yel);color:var(--yel);}
+.run-btn:disabled{opacity:.4;cursor:not-allowed;}
+
+/* ── MAIN ── */
+.main{padding:24px 28px;overflow-y:auto;display:flex;flex-direction:column;gap:20px;}
+
+/* Edu banner */
+.edu-banner{
+  background:var(--s1);border:1px solid var(--bd);border-radius:var(--rl);
+  padding:16px 20px;
+  display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:16px;
+}
+.edu-step{display:flex;align-items:flex-start;gap:10px;}
+.edu-num{
+  font-family:var(--disp);font-weight:900;font-size:20px;color:var(--bd2);
+  line-height:1;flex-shrink:0;
+}
+.edu-title{font-family:var(--disp);font-weight:700;font-size:11px;color:var(--accent);margin-bottom:2px;}
+.edu-desc{font-size:11px;color:var(--t2);line-height:1.5;}
+
+/* Portfolio vis */
+.port-vis{
+  display:grid;grid-template-columns:1fr 80px 1fr;
+  align-items:center;gap:16px;
+}
+.port-block{
+  background:var(--s1);border:1px solid var(--bd);
+  border-radius:var(--rl);padding:16px;
+}
+.port-block-title{
+  font-family:var(--mono);font-size:9px;letter-spacing:2px;text-transform:uppercase;
+  color:var(--t3);margin-bottom:12px;
+  display:flex;align-items:center;gap:8px;
+}
+.port-block-title .dot{width:6px;height:6px;border-radius:50%;}
+.dot-blue{background:var(--accent);}
+.dot-green{background:var(--grn);}
+.bar-item{margin-bottom:10px;}
+.bar-item:last-child{margin-bottom:0;}
+.bar-meta{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;}
+.bar-name{font-size:11px;color:var(--t2);display:flex;align-items:center;gap:5px;}
+.bar-pct{font-family:var(--mono);font-size:12px;font-weight:500;color:var(--t1);}
+.bar-track{height:7px;background:var(--bd);border-radius:3px;overflow:hidden;}
+.bar-fill{height:100%;border-radius:3px;transition:width .5s cubic-bezier(.4,0,.2,1);}
+.bf-0{background:linear-gradient(90deg,#5eb8fa,#3d84d8);}
+.bf-1{background:linear-gradient(90deg,#c084fc,#9333ea);}
+.bf-2{background:linear-gradient(90deg,#42d9a6,#1db37a);}
+.bf-3{background:linear-gradient(90deg,#f8c444,#e09000);}
+.mini-badge{
+  font-family:var(--mono);font-size:8px;padding:1px 6px;
+  border-radius:10px;font-weight:500;
+}
+.mini-rf{background:var(--rfdim);color:var(--rf);border:1px solid rgba(45,212,191,.3);}
+.mini-rv{background:var(--rvdim);color:var(--rv);border:1px solid rgba(192,132,252,.3);}
+
+.arrow-area{
+  display:flex;flex-direction:column;align-items:center;gap:6px;
+}
+.arrow-icon{font-size:24px;color:var(--t3);}
+.arrow-label{font-family:var(--mono);font-size:8px;letter-spacing:1.5px;color:var(--t3);}
+
+/* Metrics */
+.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;}
+.metric{
+  background:var(--s1);border:1px solid var(--bd);
+  border-radius:var(--rl);padding:14px 16px;
+}
+.metric-label{font-family:var(--mono);font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--t3);margin-bottom:6px;}
+.metric-val{font-family:var(--disp);font-weight:700;font-size:22px;color:var(--t1);}
+.mv-green{color:var(--grn);}
+.mv-red{color:var(--red);}
+.mv-yellow{color:var(--yel);}
+.mv-accent{color:var(--accent);}
+
+/* Tabs */
+.tabs{display:flex;gap:2px;border-bottom:1px solid var(--bd);margin-bottom:16px;}
+.tab{
+  padding:9px 18px;font-family:var(--mono);font-size:11px;letter-spacing:.3px;
+  color:var(--t3);cursor:pointer;border:none;background:none;
+  border-bottom:2px solid transparent;margin-bottom:-1px;
+  transition:all .15s;
+}
+.tab.active{color:var(--accent);border-bottom-color:var(--accent);}
+.tab:hover:not(.active){color:var(--t2);}
+.tab-content{display:none;animation:fadeUp .2s ease;}
+.tab-content.active{display:block;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:none;}}
+
+/* Empty state */
+.empty{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:60px 20px;gap:12px;
+}
+.empty-icon{font-size:36px;opacity:.2;}
+.empty p{font-family:var(--mono);font-size:11px;color:var(--t3);letter-spacing:.5px;}
+
+/* Loading */
+.loading{
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  padding:48px;color:var(--accent);font-family:var(--mono);font-size:11px;
+}
+.ld{width:5px;height:5px;border-radius:50%;background:var(--accent);animation:ld 1.2s ease-in-out infinite;}
+.ld:nth-child(2){animation-delay:.2s;}
+.ld:nth-child(3){animation-delay:.4s;}
+@keyframes ld{0%,80%,100%{transform:scale(.5);opacity:.3;}40%{transform:scale(1);opacity:1;}}
+
+/* Path table */
+.tbl-wrap{overflow-x:auto;border:1px solid var(--bd);border-radius:var(--rl);}
+table{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:11px;}
+th{
+  text-align:left;padding:10px 14px;
+  font-size:9px;letter-spacing:1.5px;text-transform:uppercase;
+  color:var(--t3);background:var(--s1);
+  border-bottom:1px solid var(--bd);white-space:nowrap;
+}
+td{padding:10px 14px;border-bottom:1px solid rgba(45,68,102,.4);color:var(--t2);}
+tr:last-child td{border-bottom:none;}
+tr.goal td{color:var(--grn);}
+tr:hover td{background:rgba(94,184,250,.03);}
+.state-cell{color:var(--accent);font-size:10px;}
+.g-cell{color:var(--yel);font-weight:500;}
+.f-cell{color:var(--t1);font-weight:500;}
+.h-cell{color:var(--t3);}
+
+/* Path footer */
+.path-footer{
+  margin-top:12px;padding:12px 16px;
+  background:var(--s1);border:1px solid var(--bd);border-radius:var(--r);
+  font-family:var(--mono);font-size:10px;color:var(--t2);
+  display:flex;flex-wrap:wrap;gap:16px;
+}
+.path-footer .ok{color:var(--grn);}
+
+/* Iter log */
+.iter-log{display:flex;flex-direction:column;gap:8px;}
+.iter-entry{border:1px solid var(--bd);border-radius:var(--r);overflow:hidden;}
+.iter-header{
+  display:flex;align-items:center;gap:10px;padding:10px 14px;
+  cursor:pointer;background:var(--s1);transition:background .15s;
+}
+.iter-header:hover{background:var(--s2);}
+.iter-n{
+  font-family:var(--mono);font-size:9px;color:var(--t3);
+  background:var(--bd);padding:2px 8px;border-radius:10px;min-width:32px;text-align:center;
+}
+.iter-state{font-family:var(--mono);font-size:10px;color:var(--accent);flex:1;}
+.iter-action{font-family:var(--mono);font-size:9px;color:var(--t3);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.iter-f{font-family:var(--mono);font-size:10px;color:var(--yel);}
+.iter-body{display:none;padding:14px;border-top:1px solid var(--bd);background:rgba(14,23,38,.5);}
+.iter-body.open{display:block;}
+.iter-vals{display:flex;gap:20px;margin-bottom:12px;font-family:var(--mono);font-size:10px;}
+.iter-lists{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.list-box h5{font-family:var(--mono);font-size:9px;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px;}
+.open-lbl{color:var(--accent);}
+.closed-lbl{color:var(--red);}
+.list-items{display:flex;flex-direction:column;gap:3px;max-height:150px;overflow-y:auto;}
+.list-item{
+  font-family:var(--mono);font-size:9px;padding:5px 8px;
+  border-radius:4px;background:rgba(255,255,255,.02);
+  display:flex;justify-content:space-between;align-items:center;
+}
+.li-state{color:var(--t2);}
+.li-fgh{color:var(--t3);}
+
+/* Compare */
+.cmp-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;}
+.cmp-col{
+  background:var(--s1);border:1px solid var(--bd);border-radius:var(--rl);padding:18px;
+}
+.cmp-col.cadm{border-color:rgba(66,217,166,.35);}
+.cmp-col.cno{border-color:rgba(244,117,117,.35);}
+.cmp-title{font-family:var(--disp);font-weight:700;font-size:11px;letter-spacing:.5px;text-transform:uppercase;margin-bottom:12px;}
+.cadm .cmp-title{color:var(--grn);}
+.cno .cmp-title{color:var(--red);}
+.cmp-formula{font-family:var(--mono);font-size:9px;color:var(--t3);line-height:1.8;padding:8px;background:var(--bg);border-radius:var(--r);margin-bottom:12px;}
+.cmp-metrics{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;}
+.cmp-m{padding:10px 12px;background:var(--s2);border-radius:var(--r);}
+.cmp-m .metric-label{font-size:8px;}
+.cmp-m .metric-val{font-size:16px;}
+.cmp-warn{
+  margin-top:10px;padding:10px 12px;
+  background:var(--rdim);border:1px solid var(--red);
+  border-radius:var(--r);font-family:var(--mono);font-size:9px;color:var(--red);
+  line-height:1.6;
+}
+.cmp-note{
+  margin-top:10px;padding:10px 12px;
+  background:var(--ydim);border:1px solid var(--yel);
+  border-radius:var(--r);font-family:var(--mono);font-size:9px;color:var(--yel);
+  line-height:1.6;
+}
+.cmp-summary{
+  margin-top:18px;padding:16px;background:var(--s1);border:1px solid var(--bd);
+  border-radius:var(--rl);font-family:var(--mono);font-size:10px;color:var(--t2);
+  line-height:1.9;
+}
+.cmp-summary .title{font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--t3);margin-bottom:8px;}
+
+/* Tree */
+.tree-wrap{
+  background:var(--s1);border:1px solid var(--bd);border-radius:var(--rl);padding:20px;
+  overflow-x:auto;
+}
+.tree-legend{display:flex;gap:20px;margin-bottom:18px;font-family:var(--mono);font-size:9px;color:var(--t3);}
+.tree-legend span{display:flex;align-items:center;gap:5px;}
+.node-box{
+  border:1px solid var(--bd);border-radius:var(--r);padding:7px 14px;
+  font-family:var(--mono);font-size:10px;white-space:nowrap;
+  background:var(--bg);
+}
+.node-box.opt{border-color:var(--accent);color:var(--accent);}
+.node-box.goal{border-color:var(--grn);color:var(--grn);}
+.node-box.prune{border-color:var(--red);color:var(--t3);opacity:.5;}
+.edge-label{font-family:var(--mono);font-size:8px;color:var(--t3);}
+
+/* Toast */
+.toast{
+  position:fixed;bottom:22px;right:22px;z-index:9999;
+  background:var(--s2);border:1px solid var(--bd);border-radius:var(--rl);
+  padding:12px 18px;font-family:var(--mono);font-size:11px;color:var(--t1);
+  box-shadow:0 8px 32px rgba(0,0,0,.5);animation:toastIn .25s ease;max-width:320px;
+}
+.toast.ok{border-color:var(--grn);color:var(--grn);}
+.toast.err{border-color:var(--red);color:var(--red);}
+@keyframes toastIn{from{transform:translateY(12px);opacity:0;}to{opacity:1;transform:none;}}
+
+/* Shake animation for randomize */
+@keyframes shake{0%,100%{transform:translateX(0);}20%{transform:translateX(-4px);}40%{transform:translateX(4px);}60%{transform:translateX(-4px);}80%{transform:translateX(4px);}}
+.shake{animation:shake .35s ease;}
+
+/* Responsive */
+@media(max-width:960px){
+  .app{grid-template-columns:1fr;}
+  .sidebar{border-right:none;border-bottom:1px solid var(--bd);}
+  .metrics{grid-template-columns:repeat(2,1fr);}
+  .cmp-grid{grid-template-columns:1fr;}
+  .edu-banner{grid-template-columns:1fr 1fr;}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-badge">A*</div>
+    <div>
+      <div class="logo-text">Robo-Advisor · Rebalanceamento de Portfólio</div>
+      <div class="logo-sub">SI702 — Inteligência Artificial · UNICAMP FT</div>
+    </div>
+  </div>
+  <div class="header-badge">Algoritmo A* · Busca Heurística</div>
+</header>
+
+<div class="app">
+
+<!-- ── SIDEBAR ── -->
+<aside class="sidebar">
+
+  <!-- Assets -->
+  <div class="card">
+    <div class="sec-label">Ativos do Portfólio</div>
+    <div id="assetList"></div>
+    <button class="add-asset-btn" onclick="addAsset()">+ Adicionar ativo (máx. 4)</button>
+    <button class="random-btn" onclick="randomizeMarket()">
+      <span class="spin">↺</span> Randomizar mercado
+    </button>
+    <div class="sum-row" style="margin-top:10px;">
+      <span id="initSum" class="sum-ok">∑ Atual = 100%</span>
+      <span id="targSum" class="sum-ok">∑ Alvo = 100%</span>
+    </div>
+  </div>
+
+  <!-- Balance Presets -->
+  <div class="card">
+    <div class="sec-label">Equilíbrio RF / RV</div>
+    <div style="font-size:11px;color:var(--t2);margin-bottom:12px;line-height:1.6;">
+      Define automaticamente o alvo com base na proporção ideal entre
+      <span style="color:var(--rf);font-weight:500;">Renda Fixa</span> e
+      <span style="color:var(--rv);font-weight:500;">Renda Variável</span>.
+    </div>
+    <div class="balance-row">
+      <button class="balance-preset" onclick="applyBalance(30,70)">Arrojado<br><small>30% RF · 70% RV</small></button>
+      <button class="balance-preset" onclick="applyBalance(50,50)">Moderado<br><small>50% RF · 50% RV</small></button>
+      <button class="balance-preset" onclick="applyBalance(70,30)">Conservador<br><small>70% RF · 30% RV</small></button>
+    </div>
+    <div class="split-row" style="margin-top:4px;">
+      <span class="split-lbl rf-lbl" style="font-family:var(--mono);font-size:10px;">RF <span id="rfSplitVal" style="font-weight:700;">50</span>%</span>
+      <input type="range" class="split-rng" id="rfSplit" min="10" max="90" value="50" step="10" oninput="onSplitChange()" style="flex:1;">
+      <span class="split-lbl rv-lbl" style="font-family:var(--mono);font-size:10px;"><span id="rvSplitVal">50</span>% RV</span>
+    </div>
+    <button class="run-btn secondary" style="margin-top:10px;font-size:11px;padding:8px;" onclick="applyBalanceFromSlider()">
+      ✦ Aplicar como alvo
+    </button>
+  </div>
+
+  <!-- Params -->
+  <div class="card">
+    <div class="sec-label">Parâmetros</div>
+    <div class="fg">
+      <label>Valor do Portfólio (R$)</label>
+      <input type="number" id="portfolioValue" value="10000" min="100"/>
+    </div>
+    <div class="fg">
+      <label>Custo por transação (R$)</label>
+      <input type="number" id="costPerUnit" value="15" min="0.01" step="0.01"/>
+    </div>
+    <div class="fg">
+      <label>Unidade mínima (p.p.)</label>
+      <input type="number" id="unitPP" value="10" min="1" max="50"/>
+    </div>
+    <div class="fg" style="margin-bottom:0;">
+      <label>Tolerância δ (p.p.)</label>
+      <input type="number" id="tolerance" value="2" min="0" max="20"/>
+    </div>
+  </div>
+
+  <!-- Heuristic -->
+  <div class="card">
+    <div class="sec-label">Heurística</div>
+    <div class="h-toggle">
+      <button class="h-btn adm" id="btnAdm" onclick="setHeuristic('admissible')">
+        ✓ Admissível<br><span style="font-size:8px;opacity:.75;font-family:var(--sans);">Manhattan Financeira (×½)</span>
+      </button>
+      <button class="h-btn" id="btnNon" onclick="setHeuristic('non_admissible')">
+        ✗ Não-admissível<br><span style="font-size:8px;opacity:.75;font-family:var(--sans);">Superestima (×0.9)</span>
+      </button>
+    </div>
+    <div class="h-info" id="heuristicInfo"></div>
+  </div>
+
+  <!-- Actions -->
+  <div>
+    <button class="run-btn primary" id="runBtn" onclick="runSimulation()">▶ Executar A*</button>
+    <button class="run-btn secondary" id="compareBtn" onclick="runCompare()">⇄ Comparar Heurísticas</button>
+  </div>
+
+</aside>
+
+<!-- ── MAIN ── -->
+<main class="main">
+
+  <!-- Edu banner -->
+  <div class="edu-banner">
+    <div class="edu-step">
+      <div class="edu-num">01</div>
+      <div>
+        <div class="edu-title">Estado Inicial</div>
+        <div class="edu-desc">Portfólio desbalanceado: alocação atual diverge do alvo do investidor.</div>
+      </div>
+    </div>
+    <div class="edu-step">
+      <div class="edu-num">02</div>
+      <div>
+        <div class="edu-title">Expansão</div>
+        <div class="edu-desc">A* avalia f(n)=g(n)+h(n) e expande o nó de menor custo estimado.</div>
+      </div>
+    </div>
+    <div class="edu-step">
+      <div class="edu-num">03</div>
+      <div>
+        <div class="edu-title">Poda</div>
+        <div class="edu-desc">Nós com f(n) maior que o melhor caminho são descartados sem explorar.</div>
+      </div>
+    </div>
+    <div class="edu-step">
+      <div class="edu-num">04</div>
+      <div>
+        <div class="edu-title">Solução ótima</div>
+        <div class="edu-desc">Com heurística admissível, A* garante o menor custo de rebalanceamento.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Portfolio viz -->
+  <div class="port-vis">
+    <div class="port-block">
+      <div class="port-block-title"><div class="dot dot-blue"></div> Estado Inicial</div>
+      <div id="initBars"></div>
+    </div>
+    <div class="arrow-area">
+      <div class="arrow-icon">→</div>
+      <div class="arrow-label">A*</div>
+    </div>
+    <div class="port-block">
+      <div class="port-block-title"><div class="dot dot-green"></div> Estado Objetivo</div>
+      <div id="targBars"></div>
+    </div>
+  </div>
+
+  <!-- Metrics -->
+  <div class="metrics">
+    <div class="metric">
+      <div class="metric-label">Custo Total</div>
+      <div class="metric-val mv-green" id="mCost">—</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Nós Expandidos</div>
+      <div class="metric-val mv-yellow" id="mNodes">—</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Transações</div>
+      <div class="metric-val mv-accent" id="mSteps">—</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Solução</div>
+      <div class="metric-val" id="mStatus">—</div>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div>
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('caminho',this)">Caminho Ótimo</button>
+      <button class="tab" onclick="switchTab('arvore',this)">Árvore de Busca</button>
+      <button class="tab" onclick="switchTab('iter',this)">Listas Open / Closed</button>
+      <button class="tab" onclick="switchTab('cmp',this)">Comparativo</button>
+    </div>
+
+    <div id="tab-caminho" class="tab-content active">
+      <div id="pathContent">
+        <div class="empty"><div class="empty-icon">◎</div><p>Execute o algoritmo para ver o caminho ótimo</p></div>
+      </div>
+    </div>
+
+    <div id="tab-arvore" class="tab-content">
+      <div id="treeContent">
+        <div class="empty"><div class="empty-icon">◎</div><p>Execute o algoritmo para ver a árvore de busca</p></div>
+      </div>
+    </div>
+
+    <div id="tab-iter" class="tab-content">
+      <div id="iterContent">
+        <div class="empty"><div class="empty-icon">◎</div><p>Execute o algoritmo para ver as listas Open/Closed</p></div>
+      </div>
+    </div>
+
+    <div id="tab-cmp" class="tab-content">
+      <div id="compareContent">
+        <div class="empty"><div class="empty-icon">◎</div><p>Clique em "Comparar Heurísticas" para ver a diferença</p></div>
+      </div>
+    </div>
+  </div>
+
+</main>
+</div>
+
+<script>
+// ─────────────────────────────────────────────
+// STATE
+// ─────────────────────────────────────────────
+let assets = [
+  { name:"Tesouro Selic", type:"RF", initial:90, target:50 },
+  { name:"PETR4",         type:"RV", initial:10, target:50 },
+];
+let heuristicMode = "admissible";
+
+const COLORS = ["bf-0","bf-1","bf-2","bf-3"];
+
+// ─────────────────────────────────────────────
+// ASSET MANAGEMENT
+// ─────────────────────────────────────────────
+function addAsset(){
+  if(assets.length >= 4){ showToast("Máximo de 4 ativos","err"); return; }
+  assets.push({name:`Ativo ${assets.length+1}`,type:"RV",initial:0,target:0});
+  renderAssets();
+}
+function removeAsset(i){
+  if(assets.length <= 2){ showToast("Mínimo de 2 ativos","err"); return; }
+  assets.splice(i,1);
+  renderAssets();
+}
+function toggleType(i){
+  assets[i].type = assets[i].type === "RF" ? "RV" : "RF";
+  renderAssets();
+}
+
+function renderAssets(){
+  const list = document.getElementById("assetList");
+  list.innerHTML = "";
+  assets.forEach((a,i)=>{
+    const card = document.createElement("div");
+    card.className = "asset-card";
+    card.id = `acard-${i}`;
+    card.innerHTML = `
+      <div class="asset-header">
+        <input class="asset-name-input" value="${a.name}" 
+          oninput="assets[${i}].name=this.value;updatePortVis()" 
+          placeholder="Nome do ativo"/>
+        <span class="type-badge ${a.type.toLowerCase()}" onclick="toggleType(${i})"
+          title="Clique para alternar RF / RV">${a.type}</span>
+        <button class="remove-btn" onclick="removeAsset(${i})" title="Remover ativo">×</button>
+      </div>
+
+      <div class="alloc-row">
+        <div class="alloc-label">
+          <span>Alocação atual</span>
+          <span style="color:var(--accent)">Mercado hoje</span>
+        </div>
+        <div class="alloc-controls">
+          <input type="range" min="0" max="100" step="1" value="${a.initial}"
+            oninput="syncAlloc(${i},'initial',+this.value)"/>
+          <input type="number" class="num-input initial-inp" id="init-num-${i}"
+            min="0" max="100" value="${a.initial}"
+            oninput="syncAlloc(${i},'initial',+this.value)"
+            onblur="validateNum(${i},'initial',this)"/>
+          <span class="pct-unit">%</span>
+        </div>
+      </div>
+
+      <div class="alloc-row">
+        <div class="alloc-label">
+          <span>Alocação alvo</span>
+          <span style="color:var(--grn)">Objetivo</span>
+        </div>
+        <div class="alloc-controls">
+          <input type="range" min="0" max="100" step="1" value="${a.target}"
+            oninput="syncAlloc(${i},'target',+this.value)"/>
+          <input type="number" class="num-input target-inp" id="targ-num-${i}"
+            min="0" max="100" value="${a.target}"
+            oninput="syncAlloc(${i},'target',+this.value)"
+            onblur="validateNum(${i},'target',this)"/>
+          <span class="pct-unit">%</span>
+        </div>
+      </div>
+    `;
+    list.appendChild(card);
+  });
+  updateSums();
+  updatePortVis();
+}
+
+function syncAlloc(i, key, val){
+  val = Math.max(0, Math.min(100, isNaN(val)?0:val));
+  assets[i][key] = val;
+  // Sync the other input
+  const card = document.getElementById(`acard-${i}`);
+  const inputs = card.querySelectorAll(key==='initial'?'.initial-inp':'input[type=range]');
+  // Update both slider and number input for this key
+  const sliders = card.querySelectorAll('input[type=range]');
+  const nums    = card.querySelectorAll('.num-input');
+  if(key==='initial'){
+    sliders[0].value = val;
+    nums[0].value    = val;
+  } else {
+    sliders[1].value = val;
+    nums[1].value    = val;
+  }
+  updateSums();
+  updatePortVis();
+}
+
+function validateNum(i, key, el){
+  let v = parseInt(el.value)||0;
+  v = Math.max(0, Math.min(100, v));
+  el.value = v;
+  syncAlloc(i, key, v);
+}
+
+function updateSums(){
+  const si = assets.reduce((s,a)=>s+a.initial,0);
+  const st = assets.reduce((s,a)=>s+a.target,0);
+  const ei = document.getElementById("initSum");
+  const et = document.getElementById("targSum");
+  ei.textContent = `∑ Atual = ${si}%`;
+  ei.className   = si===100 ? "sum-ok" : "sum-err";
+  et.textContent = `∑ Alvo = ${st}%`;
+  et.className   = st===100 ? "sum-ok" : "sum-err";
+}
+
+function updatePortVis(){
+  const ib = document.getElementById("initBars");
+  const tb = document.getElementById("targBars");
+  ib.innerHTML = "";
+  tb.innerHTML = "";
+  assets.forEach((a,i)=>{
+    ib.innerHTML += barHTML(a,a.initial,i);
+    tb.innerHTML += barHTML(a,a.target,i);
+  });
+}
+function barHTML(a, pct, i){
+  const badge = `<span class="mini-badge mini-${a.type.toLowerCase()}">${a.type}</span>`;
+  return `<div class="bar-item">
+    <div class="bar-meta">
+      <span class="bar-name">${badge} ${a.name}</span>
+      <span class="bar-pct">${pct}%</span>
+    </div>
+    <div class="bar-track">
+      <div class="bar-fill ${COLORS[i%4]}" style="width:${pct}%"></div>
+    </div>
+  </div>`;
+}
+
+// ─────────────────────────────────────────────
+// RANDOMIZE MARKET
+// ─────────────────────────────────────────────
+function randomizeMarket(){
+  const n = assets.length;
+  // Random weights, multiples of 10 that sum to 100
+  let tries = 0;
+  let vals;
+  do {
+    vals = Array.from({length:n},()=> (Math.floor(Math.random()*9)+1)*10);
+    const tot = vals.reduce((a,b)=>a+b,0);
+    // Adjust last element
+    vals[n-1] += 100 - tot;
+    tries++;
+  } while((vals.some(v=>v<=0||v>100) || vals.reduce((a,b)=>a+b,0)!==100) && tries<50);
+  
+  if(vals.reduce((a,b)=>a+b,0)!==100 || vals.some(v=>v<0)){
+    // Fallback: distribute evenly
+    const base = Math.floor(100/n);
+    vals = Array(n).fill(base);
+    vals[0] += 100 - base*n;
+  }
+  
+  assets.forEach((a,i)=>{ a.initial = vals[i]; });
+  renderAssets();
+  
+  // Shake animation on all asset cards
+  document.querySelectorAll('.asset-card').forEach(card=>{
+    card.classList.remove('shake');
+    void card.offsetWidth;
+    card.classList.add('shake');
+  });
+  showToast(`Mercado randomizado — ${n} ativos redistribuídos`,"ok");
+}
+
+// ─────────────────────────────────────────────
+// RF/RV BALANCE
+// ─────────────────────────────────────────────
+function onSplitChange(){
+  const v = document.getElementById('rfSplit').value;
+  document.getElementById('rfSplitVal').textContent = v;
+  document.getElementById('rvSplitVal').textContent = 100-v;
+}
+function applyBalance(rfPct, rvPct){
+  document.getElementById('rfSplit').value = rfPct;
+  onSplitChange();
+  applyBalancePct(rfPct, rvPct);
+  document.querySelectorAll('.balance-preset').forEach(b=>b.classList.remove('active'));
+}
+function applyBalanceFromSlider(){
+  const rfPct = parseInt(document.getElementById('rfSplit').value);
+  applyBalancePct(rfPct, 100-rfPct);
+}
+function applyBalancePct(rfPct, rvPct){
+  const rfAssets = assets.filter(a=>a.type==='RF');
+  const rvAssets = assets.filter(a=>a.type==='RV');
+  if(!rfAssets.length && !rvAssets.length){ showToast("Nenhum ativo classificado","err"); return; }
+  
+  // Base allocation per asset in each category
+  let rfBase = rfAssets.length ? Math.floor(rfPct/rfAssets.length) : 0;
+  let rvBase = rvAssets.length ? Math.floor(rvPct/rvAssets.length) : 0;
+  
+  assets.forEach(a=>{
+    a.target = a.type==='RF' ? rfBase : rvBase;
+  });
+  
+  // Distribute remainder
+  let total = assets.reduce((s,a)=>s+a.target,0);
+  let remainder = 100-total;
+  let idx = 0;
+  while(remainder > 0){
+    assets[idx%assets.length].target += 1;
+    remainder--;
+    idx++;
+  }
+  
+  renderAssets();
+  showToast(`Alvo: ${rfPct}% RF / ${rvPct}% RV aplicado`,"ok");
+}
+
+// ─────────────────────────────────────────────
+// HEURISTIC
+// ─────────────────────────────────────────────
+function setHeuristic(mode){
+  heuristicMode = mode;
+  document.getElementById("btnAdm").className = "h-btn" + (mode==="admissible"?" adm":"");
+  document.getElementById("btnNon").className = "h-btn" + (mode==="non_admissible"?" non":"");
+  const info = document.getElementById("heuristicInfo");
+  if(mode==="admissible"){
+    info.innerHTML = `h(n) = ½ · Σ|wᵢ−wᵢ*| · V · c<sub>min</sub><br><span style="color:var(--grn)">✓ Admissível — A* garante solução ótima</span><br><span style="color:var(--t3)">Nunca superestima o custo real restante.</span>`;
+  } else {
+    info.innerHTML = `h(n) = 0.9 · Σ|wᵢ−wᵢ*| · V · c<sub>min</sub><br><span style="color:var(--red)">✗ Não-admissível — pode não ser ótimo</span><br><span style="color:var(--t3)">Superestima → pode descartar o caminho ótimo.</span>`;
+  }
+}
+
+// ─────────────────────────────────────────────
+// HELPERS
+// ─────────────────────────────────────────────
+function getParams(){
+  return {
+    assets: assets.map(a=>a.name),
+    initial: assets.map(a=>a.initial),
+    target:  assets.map(a=>a.target),
+    portfolio_value: +document.getElementById("portfolioValue").value,
+    cost_per_unit:   +document.getElementById("costPerUnit").value,
+    unit_pp:         +document.getElementById("unitPP").value,
+    tolerance:       +document.getElementById("tolerance").value,
+    heuristic_mode: heuristicMode,
+  };
+}
+
+function stateLabel(state){
+  return "[" + state.map((v,i)=>`${assets[i]?.name||'A'+i}: ${v}%`).join(", ") + "]";
+}
+
+function loading(elId){
+  document.getElementById(elId).innerHTML = `<div class="loading"><div class="ld"></div><div class="ld"></div><div class="ld"></div><span>Executando A*…</span></div>`;
+}
+
+// ─────────────────────────────────────────────
+// RUN
+// ─────────────────────────────────────────────
+async function runSimulation(){
+  const p = getParams();
+  if(p.initial.reduce((a,b)=>a+b,0)!==100||p.target.reduce((a,b)=>a+b,0)!==100){
+    showToast("As alocações devem somar 100%","err"); return;
+  }
+  document.getElementById("runBtn").disabled = true;
+  loading("pathContent"); loading("treeContent"); loading("iterContent");
+
+  try {
+    const res = await fetch("/run",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(p)});
+    const data = await res.json();
+    if(data.error){ showToast(data.error,"err"); return; }
+    renderAll(data);
+    showToast(data.solution_found ? `✓ Custo ótimo: R$ ${data.total_cost}` : "Sem solução encontrada", data.solution_found?"ok":"err");
+  } catch(e){
+    showToast("Erro ao conectar com o servidor Python. Verifique se está rodando na porta 5050.","err");
+  } finally {
+    document.getElementById("runBtn").disabled = false;
+  }
+}
+
+async function runCompare(){
+  const p = getParams();
+  if(p.initial.reduce((a,b)=>a+b,0)!==100||p.target.reduce((a,b)=>a+b,0)!==100){
+    showToast("As alocações devem somar 100%","err"); return;
+  }
+  document.getElementById("compareBtn").disabled = true;
+  loading("compareContent");
+  switchTab("cmp", document.querySelector('.tab:nth-child(4)'));
+
+  try {
+    const res = await fetch("/compare",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(p)});
+    const data = await res.json();
+    renderCompare(data);
+  } catch(e){
+    showToast("Erro ao conectar com o servidor.","err");
+  } finally {
+    document.getElementById("compareBtn").disabled = false;
+  }
+}
+
+// ─────────────────────────────────────────────
+// RENDER ALL
+// ─────────────────────────────────────────────
+function renderAll(data){
+  document.getElementById("mCost").textContent  = data.solution_found ? `R$ ${data.total_cost}` : "—";
+  document.getElementById("mNodes").textContent = data.nodes_expanded;
+  document.getElementById("mSteps").textContent = data.solution_found ? (data.path.length-1) : "—";
+  const s = document.getElementById("mStatus");
+  s.textContent  = data.solution_found ? "✓ ÓTIMA" : "✗ NÃO ENCONTRADA";
+  s.className    = "metric-val " + (data.solution_found ? "mv-green" : "mv-red");
+
+  if(data.solution_found){
+    renderPath(data);
+    renderTree(data);
+  } else {
+    document.getElementById("pathContent").innerHTML = `<div class="empty"><div class="empty-icon">✗</div><p>Nenhuma solução encontrada dentro do limite de iterações</p></div>`;
+    document.getElementById("treeContent").innerHTML = `<div class="empty"><div class="empty-icon">✗</div><p>Sem árvore — nenhuma solução encontrada</p></div>`;
+  }
+  renderIterations(data);
+}
+
+function computeH(state, V, cUnit, u){
+  const target = assets.map(a=>a.target);
+  const dev = state.reduce((s,v,j)=>s+Math.abs(v-target[j]),0);
+  const monDev = (dev/100)*V;
+  const cMin   = cUnit / (u * V/100);
+  return Math.round((0.5 * monDev * cMin)*100)/100;
+}
+
+// ── PATH ──
+function renderPath(data){
+  const el = document.getElementById("pathContent");
+  const V  = +document.getElementById("portfolioValue").value;
+  const cu = +document.getElementById("costPerUnit").value;
+  const u  = +document.getElementById("unitPP").value;
+
+  let html = `<div class="tbl-wrap"><table>
+    <thead><tr>
+      <th>Passo</th>
+      <th>Estado do Portfólio</th>
+      <th>Ação Executada</th>
+      <th title="Custo acumulado real até este nó">g(n) — Custo Acum.</th>
+      <th title="Estimativa heurística do custo restante">h(n) — Estimativa</th>
+      <th title="Função de avaliação total: g + h">f(n) = g + h</th>
+    </tr></thead><tbody>`;
+
+  data.path.forEach((step,i)=>{
+    const h = computeH(step.state, V, cu, u);
+    const f = Math.round((step.g + h)*100)/100;
+    const isGoal = i===data.path.length-1;
+    html += `<tr class="${isGoal?'goal':''}">
+      <td style="color:var(--t3);font-weight:500;">${i}</td>
+      <td class="state-cell">${stateLabel(step.state)}</td>
+      <td style="color:var(--t2);font-size:10px;">${step.action}</td>
+      <td class="g-cell">R$ ${step.g}</td>
+      <td class="h-cell">R$ ${h.toFixed(2)}</td>
+      <td class="f-cell">R$ ${f.toFixed(2)}</td>
+    </tr>`;
+  });
+
+  html += `</tbody></table></div>`;
+  html += `<div class="path-footer">
+    <span class="ok">✓ Custo total: R$ ${data.total_cost}</span>
+    <span>${data.path.length-1} transações elementares</span>
+    <span>${data.nodes_expanded} nós expandidos pelo algoritmo</span>
+    <span style="color:${heuristicMode==='admissible'?'var(--grn)':'var(--red)'}">
+      Heurística: ${heuristicMode==='admissible'?'Admissível ✓':'Não-admissível ✗'}
+    </span>
+  </div>`;
+  el.innerHTML = html;
+}
+
+// ── TREE ──
+function renderTree(data){
+  const el = document.getElementById("treeContent");
+  if(!data.solution_found){ el.innerHTML="<div class='empty'><p>Sem solução</p></div>"; return; }
+
+  const optSet = new Set(data.path.map(s=>JSON.stringify(s.state)));
+
+  let html = `<div class="tree-wrap">
+    <div class="tree-legend">
+      <span><span style="color:var(--accent)">■</span> Caminho ótimo</span>
+      <span><span style="color:var(--grn)">■</span> Objetivo</span>
+      <span><span style="color:var(--red);opacity:.5">■</span> Nó podado (f > ótimo)</span>
+    </div>
+    <div>`;
+
+  data.path.forEach((step,i)=>{
+    const isGoal = i===data.path.length-1;
+    const isRoot = i===0;
+    const iter = data.iterations_log.find(it=>JSON.stringify(it.state)===JSON.stringify(step.state));
+    const g = step.g, h = iter ? iter.h.toFixed(2) : "?", f = iter ? iter.f.toFixed(2) : "?";
+
+    if(!isRoot){
+      html += `<div style="display:flex;align-items:center;margin-left:${i*28}px;font-family:var(--mono);font-size:10px;color:var(--t3);line-height:1;">│</div>`;
+      html += `<div style="display:flex;align-items:center;margin-left:${i*28}px;font-family:var(--mono);font-size:9px;color:var(--t3);margin-bottom:2px;">└── <span style="color:var(--t3);font-size:8px;margin-left:4px;">${step.action}</span></div>`;
+    }
+
+    html += `<div style="display:flex;align-items:center;gap:10px;margin-bottom:${isGoal?'0':'2px'};margin-left:${i*28}px;">`;
+    html += `<div class="node-box ${isGoal?'goal':'opt'}">n${i}: ${stateLabel(step.state)} &nbsp;·&nbsp; g=${g} h=${h} f=${f}${isGoal?' ★ OBJETIVO':''}</div>`;
+
+    // Show pruned siblings from this iteration's open list
+    if(iter){
+      const pruned = iter.open_list.filter(o=>!optSet.has(JSON.stringify(o.state)));
+      pruned.slice(0,2).forEach(p=>{
+        html += `<div class="node-box prune">${stateLabel(p.state)} f=${p.f} ✗</div>`;
+      });
+    }
+    html += `</div>`;
+  });
+
+  html += `</div></div>`;
+  el.innerHTML = html;
+}
+
+// ── ITERATIONS ──
+function renderIterations(data){
+  const el = document.getElementById("iterContent");
+  if(!data.iterations_log||!data.iterations_log.length){
+    el.innerHTML="<div class='empty'><p>Nenhuma iteração registrada</p></div>"; return;
+  }
+
+  let html = `<div class="iter-log">`;
+  data.iterations_log.forEach((it,idx)=>{
+    html += `<div class="iter-entry">
+      <div class="iter-header" onclick="toggleIter(${idx})">
+        <div class="iter-n">#${it.iteration}</div>
+        <div class="iter-state">${stateLabel(it.state)}</div>
+        <div class="iter-action">${it.action}</div>
+        <div class="iter-f">f=${it.f.toFixed(2)}</div>
+        <span style="font-family:var(--mono);font-size:10px;color:var(--t3);margin-left:4px;">▸</span>
+      </div>
+      <div class="iter-body" id="ib-${idx}">
+        <div class="iter-vals">
+          <span>g(n) = <span style="color:var(--yel)">R$ ${it.g}</span></span>
+          <span>h(n) = <span style="color:var(--t2)">R$ ${it.h.toFixed(2)}</span></span>
+          <span>f(n) = <span style="color:var(--accent)">R$ ${it.f.toFixed(2)}</span></span>
+        </div>
+        <div class="iter-lists">
+          <div class="list-box">
+            <h5 class="open-lbl">OPEN LIST (${it.open_list.length})</h5>
+            <div class="list-items">
+              ${it.open_list.length===0
+                ? '<div style="font-family:var(--mono);font-size:10px;color:var(--t3)">∅ vazia</div>'
+                : it.open_list.map(o=>`<div class="list-item"><span class="li-state">${stateLabel(o.state)}</span><span class="li-fgh">f=${o.f} g=${o.g} h=${o.h}</span></div>`).join('')}
+            </div>
+          </div>
+          <div class="list-box">
+            <h5 class="closed-lbl">CLOSED LIST (${it.closed_list.length})</h5>
+            <div class="list-items">
+              ${it.closed_list.length===0
+                ? '<div style="font-family:var(--mono);font-size:10px;color:var(--t3)">∅ vazia</div>'
+                : it.closed_list.map(c=>`<div class="list-item"><span class="li-state">${stateLabel(c.state)}</span><span class="li-fgh">g=${c.g}</span></div>`).join('')}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>`;
+  });
+  html += `</div>`;
+  el.innerHTML = html;
+}
+
+// ── COMPARE ──
+function renderCompare(data){
+  const el = document.getElementById("compareContent");
+  const adm = data.admissible, non = data.non_admissible;
+  const admCost = adm.solution_found ? adm.total_cost : "—";
+  const nonCost = non.solution_found ? non.total_cost : "—";
+
+  const nonNote = (adm.solution_found && non.solution_found && non.total_cost > adm.total_cost)
+    ? `<div class="cmp-warn">⚠ Solução subótima: R$ ${non.total_cost} > R$ ${adm.total_cost}<br>A* encontrou caminho mais caro ao superestimar h(n).</div>`
+    : (adm.solution_found && non.solution_found && non.total_cost === adm.total_cost)
+    ? `<div class="cmp-note">Custos iguais neste cenário, mas a otimalidade não é garantida teoricamente com heurística não-admissível.</div>`
+    : '';
+
+  let html = `<div class="cmp-grid">
+    <div class="cmp-col cadm">
+      <div class="cmp-title">✓ Heurística Admissível</div>
+      <div class="cmp-formula">h(n) = ½ · Σ|wᵢ−wᵢ*| · V · c<sub>min</sub><br><span style="color:var(--grn)">→ Nunca superestima: ótimo garantido</span></div>
+      <div class="cmp-metrics">
+        <div class="cmp-m metric"><div class="metric-label">Custo Total</div><div class="metric-val mv-green">R$ ${admCost}</div></div>
+        <div class="cmp-m metric"><div class="metric-label">Nós Expandidos</div><div class="metric-val mv-yellow">${adm.nodes_expanded}</div></div>
+      </div>
+      ${adm.solution_found ? pathMini(adm.path) : '<p style="color:var(--red);font-family:var(--mono);font-size:11px">Sem solução</p>'}
+    </div>
+    <div class="cmp-col cno">
+      <div class="cmp-title">✗ Heurística Não-Admissível</div>
+      <div class="cmp-formula">h(n) = 0.9 · Σ|wᵢ−wᵢ*| · V · c<sub>min</sub><br><span style="color:var(--red)">→ Pode superestimar: ótimo NÃO garantido</span></div>
+      <div class="cmp-metrics">
+        <div class="cmp-m metric"><div class="metric-label">Custo Total</div><div class="metric-val mv-red">R$ ${nonCost}</div></div>
+        <div class="cmp-m metric"><div class="metric-label">Nós Expandidos</div><div class="metric-val mv-yellow">${non.nodes_expanded}</div></div>
+      </div>
+      ${non.solution_found ? pathMini(non.path) : '<p style="color:var(--red);font-family:var(--mono);font-size:11px">Sem solução</p>'}
+      ${nonNote}
+    </div>
+  </div>
+  <div class="cmp-summary">
+    <div class="title">Análise Comparativa</div>
+    <div>Admissível: <span style="color:var(--grn)">${adm.nodes_expanded} nós</span> expandidos — custo <span style="color:var(--grn)">R$ ${admCost}</span></div>
+    <div>Não-admissível: <span style="color:var(--red)">${non.nodes_expanded} nós</span> expandidos — custo <span style="color:var(--red)">R$ ${nonCost}</span></div>
+    <div style="margin-top:8px;color:var(--t3)">A heurística admissível (Manhattan Financeira ×½) garante solução de custo mínimo conforme Russell &amp; Norvig [4].</div>
+  </div>`;
+  el.innerHTML = html;
+}
+
+function pathMini(path){
+  let html = `<div style="font-family:var(--mono);font-size:9px;color:var(--t2);">`;
+  path.forEach((step,i)=>{
+    const isGoal = i===path.length-1;
+    html += `<div style="display:flex;align-items:center;gap:6px;padding:4px 0;border-bottom:1px solid var(--bd);">
+      <span style="color:${isGoal?'var(--grn)':'var(--accent)'};">${stateLabel(step.state)}</span>
+      <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--t3);">${step.action}</span>
+      <span style="color:var(--yel);white-space:nowrap;">R$ ${step.g}</span>
+    </div>`;
+  });
+  html += `</div>`;
+  return html;
+}
+
+// ─────────────────────────────────────────────
+// UI HELPERS
+// ─────────────────────────────────────────────
+function switchTab(name, btn){
+  document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+  if(btn) btn.classList.add('active');
+}
+
+function toggleIter(idx){
+  document.getElementById(`ib-${idx}`).classList.toggle('open');
+}
+
+function showToast(msg, type="ok"){
+  const t = document.createElement("div");
+  t.className = `toast ${type}`;
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(()=>{ t.style.opacity='0'; t.style.transition='opacity .3s'; setTimeout(()=>t.remove(),300); },3000);
+}
+
+// ─────────────────────────────────────────────
+// INIT
+// ─────────────────────────────────────────────
+renderAssets();
+setHeuristic("admissible");
+updatePortVis();
+onSplitChange();
+</script>
+</body>
+</html>
