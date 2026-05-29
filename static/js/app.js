@@ -9,7 +9,7 @@ let assets = [
 let heuristicMode = "admissible";
 let assetCosts = {};
 let lastRunData = null;
-const MAX_ASSETS = 20;
+const MAX_ASSETS = 4;
 
 // ──────────────────────────────────────
 // INIT
@@ -100,7 +100,7 @@ function updateCost(i, val){
 
 function getCostForAsset(a){
   if(a.customCost != null) return a.customCost;
-  return assetCosts[a.name] ?? 15;
+  return assetCosts[a.name] ?? 40;
 }
 
 function renderAssets(){
@@ -260,7 +260,7 @@ function setHeuristic(mode){
   if(mode==="admissible"){
     info.innerHTML = `h(n) = 0.5 × Σ|wᵢ−wᵢ*| × c<sub>min</sub><br><span style="color:var(--grn)">✓ Nunca superestima — ótimo garantido</span>`;
   } else {
-    info.innerHTML = `h(n) = 15.0 × Σ|wᵢ−wᵢ*| × c<sub>min</sub><br><span style="color:var(--red)">✗ Superestima fortemente — pode descartar o ótimo</span>`;
+    info.innerHTML = `h(n) = 40.0 × Σ|wᵢ−wᵢ*| × c<sub>min</sub><br><span style="color:var(--red)">✗ Superestima fortemente — pode descartar o ótimo</span>`;
   }
 }
 
@@ -309,7 +309,9 @@ async function runSimulation(){
     showToast("Alocações devem somar 100%","err"); return;
   }
   document.getElementById("runBtn").disabled = true;
-  loading("pathContent"); loading("iterContent"); loading("treeContent");
+  loading("pathContent");
+  loading("iterContent");
+  loading("treeWrapper");
 
   try {
     const res  = await fetch("/run",{
@@ -452,7 +454,7 @@ function renderCompare(data){
     warnNon = `<div class="warn-box sub">⚠ Solução subótima detectada!<br>
       Custo real: R$ ${non.total_cost} vs ótimo: R$ ${adm.total_cost}<br>
       Diferença: +R$ ${data.cost_delta} (+${data.suboptimal_pct}%)<br>
-      h×15 superestimou — o caminho ótimo foi podado prematuramente.</div>`;
+      h×40 superestimou — o caminho ótimo foi podado prematuramente.</div>`;
   } else if(adm?.solution_found && non?.solution_found){
     warnNon = `<div class="warn-box eq">Mesmo custo neste cenário — mas a otimalidade NÃO é garantida teoricamente.</div>`;
   }
@@ -471,8 +473,8 @@ function renderCompare(data){
         ${adm?.solution_found ? pathMini(adm.path,'adm') : '<p style="color:var(--red);font-family:var(--mono);font-size:10px;margin-top:8px">Sem solução</p>'}
       </div>
       <div class="cmp-col cno">
-        <div class="cmp-title">✗ Não-admissível — h(n) × 15</div>
-        <div class="cmp-formula">h(n) = 15 × Σ|wᵢ−wᵢ*| × c<sub>min</sub><br>→ Superestima fortemente — ótimo NÃO garantido</div>
+        <div class="cmp-title">✗ Não-admissível — h(n) × 40</div>
+        <div class="cmp-formula">h(n) = 40 × Σ|wᵢ−wᵢ*| × c<sub>min</sub><br>→ Superestima fortemente — ótimo NÃO garantido</div>
         <div class="cmp-m metric"><div class="metric-label">Custo Total</div><div class="metric-val ${data.diverged?'mv-red':'mv-green'}">${nonCost}</div></div>
         <div class="cmp-m metric"><div class="metric-label">Nós Expandidos</div><div class="metric-val mv-yel">${non?.nodes_expanded ?? '—'}</div></div>
         ${warnNon}
@@ -502,7 +504,7 @@ function buildDeepAnalysis(data){
   let nodeMsg = "";
   if(admNodes > nonNodes){
     nodeMsg = `<strong class="hl-yel">A heurística não-admissível expandiu ${admNodes - nonNodes} nós a menos</strong>
-    — isso acontece porque h×15 direciona agressivamente para o objetivo, podando 
+    — isso acontece porque h×40 direciona agressivamente para o objetivo, podando 
     ramos inteiros da árvore (incluindo o ótimo). É "rápida" mas não confiável.`;
   } else if(admNodes < nonNodes){
     nodeMsg = `<strong class="hl-green">A heurística admissível expandiu ${nonNodes - admNodes} nós a menos</strong>
@@ -525,7 +527,7 @@ function buildDeepAnalysis(data){
       <ul style="margin:8px 0 0 16px;font-size:11px;color:var(--t2);line-height:2;">
         <li><strong>Assimetria de custos extrema</strong>: ${minCostAsset.name} (R$${minCostAsset.cost}/pp) 
             vs ${maxCostAsset.name} (R$${maxCostAsset.cost}/pp) — razão ${costRatio}×</li>
-        <li><strong>h×15 superestimou fortemente</strong> o custo restante a partir de certos nós, 
+        <li><strong>h×40 superestimou fortemente</strong> o custo restante a partir de certos nós, 
             tornando o f(n) de caminhos baratos <em>aparentemente caro</em></li>
         <li><strong>O A* não-admissível descartou prematuramente</strong> nós com g pequeno 
             mas h superestimado, assumindo que eram piores do que realmente eram</li>
@@ -539,8 +541,8 @@ function buildDeepAnalysis(data){
         <li><strong>Espaço de estados pequeno</strong> com poucos caminhos alternativos — ambas as heurísticas 
             chegam ao mesmo nó objetivo pela mesma rota</li>
         <li><strong>Uniformidade de custos</strong> ou poucos ativos: com 2 ativos, existe apenas 
-            1 caminho possível, então h×15 não tem "caminhos alternativos" para descartar</li>
-        <li><strong>Coincidência de ordenação</strong>: mesmo que h×15 superestime, a superestimação 
+            1 caminho possível, então h×40 não tem "caminhos alternativos" para descartar</li>
+        <li><strong>Coincidência de ordenação</strong>: mesmo que h×40 superestime, a superestimação 
             é <em>uniformemente</em> aplicada, não alterando a ordem relativa dos nós</li>
         <li>Use os cenários com <strong>4+ ativos e custos assimétricos</strong> para forçar divergência</li>
       </ul>`;
@@ -592,7 +594,7 @@ function buildDeepAnalysis(data){
         O A* com h admissível expande nós em ordem crescente de f(n)=g+h e 
         <strong>nunca descarta o caminho ótimo</strong>, pois h nunca infla artificialmente f(n) de boas soluções.
         <br><br>
-        A heurística não-admissível usa fator <strong>15.0</strong>, gerando 
+        A heurística não-admissível usa fator <strong>40.0</strong>, gerando 
         <strong class="hl-red">h(n) >> h*(n)</strong>. Isso faz o algoritmo "parecer" que nós com 
         baixo g-custo ainda têm muito custo restante, levando-o a preferir nós subótimos que parecem 
         "mais próximos" do objetivo segundo h.
@@ -752,7 +754,7 @@ function renderIterations(data){
 // RENDER TREE (Canvas-based)
 // ──────────────────────────────────────
 function renderTree(data){
-  const el = document.getElementById("treeContent");
+  const el = document.getElementById("treeWrapper");
   if(!data || !data.iterations_log || data.iterations_log.length === 0){
     el.innerHTML = `<div class="empty"><div class="empty-icon">◎</div><p>Execute o algoritmo para visualizar a árvore</p></div>`;
     return;
@@ -809,23 +811,41 @@ function renderTree(data){
   }
 
   // Assign depths via BFS from init
+  // Assign depths via BFS from init
   const depthMap = new Map();
   depthMap.set(initKey, 0);
+
   const queue = [initKey];
+
+  // cria lista de adjacência UMA vez
+  const adj = new Map();
+
+  edges.forEach(e => {
+    if(!adj.has(e.from)){
+      adj.set(e.from, []);
+    }
+
+    adj.get(e.from).push(e.to);
+  });
+
+  // BFS correto
   while(queue.length){
     const cur = queue.shift();
     const d = depthMap.get(cur);
-    const adj = new Map();
 
-    edges.forEach(e=>{
-      if(!adj.has(e.from)){
-        adj.set(e.from, []);
+    (adj.get(cur) || []).forEach(next => {
+
+      if(!depthMap.has(next)){
+        depthMap.set(next, d + 1);
+        queue.push(next);
       }
 
-      adj.get(e.from).push(e.to);
     });
   }
-  nodeMap.forEach((n,k)=>{ n.depth = depthMap.get(k)||0; });
+
+  nodeMap.forEach((n,k)=>{
+    n.depth = depthMap.get(k) || 0;
+  });
 
   // Layout: group by depth
   const maxDepth = Math.max(...[...nodeMap.values()].map(n=>n.depth));
@@ -851,12 +871,33 @@ function renderTree(data){
 
   el.innerHTML = `
     <div class="tree-controls">
-      <button class="tree-ctrl-btn" onclick="zoomTree(-0.2)">− Zoom</button>
-      <button class="tree-ctrl-btn" onclick="zoomTree(0.2)">+ Zoom</button>
-      <button class="tree-ctrl-btn" onclick="resetTreeZoom()">Redefinir</button>
-      <span style="font-family:var(--mono);font-size:9px;color:var(--t3);margin-left:8px">${nodeMap.size} nós · ${edges.length} arestas</span>
-    </div>
-    <div class="tree-container" id="treeCanvasWrap" style="height:500px;">
+
+  <div class="tree-btn-group">
+
+    <button class="tree-ctrl-btn" onclick="zoomTree(-0.2)" title="Diminuir zoom">
+      −
+    </button>
+
+    <button class="tree-ctrl-btn" onclick="zoomTree(0.2)" title="Aumentar zoom">
+      +
+    </button>
+
+    <button class="tree-ctrl-btn center" onclick="centerTree()" title="Centralizar árvore">
+      ⊙
+    </button>
+
+    <button class="tree-ctrl-btn reset" onclick="resetTreeZoom()" title="Resetar zoom">
+      ↺
+    </button>
+
+  </div>
+
+  <span class="tree-stats">
+    ${nodeMap.size} nós · ${edges.length} arestas
+  </span>
+
+</div>
+    <div class="tree-container" id="treeCanvasWrap">
       <canvas id="treeCanvas"></canvas>
     </div>
     <div class="tree-legend">
@@ -869,6 +910,20 @@ function renderTree(data){
   window._treeData = {nodeMap, edges, canvasW, canvasH};
   window._treeZoom = 1.0;
   drawTree();
+}
+
+function centerTree(){
+
+  const wrap = document.getElementById("treeCanvasWrap");
+
+  if(!wrap) return;
+
+  wrap.scrollTo({
+    left: (wrap.scrollWidth - wrap.clientWidth) / 2,
+    top: 0,
+    behavior: "smooth"
+  });
+
 }
 
 function zoomTree(delta){
@@ -902,7 +957,7 @@ function drawTree(){
     ctx.beginPath();
     ctx.moveTo(from.x + 40, from.y + 18);
     ctx.lineTo(to.x + 40, to.y + 18);
-    ctx.strokeStyle = isPathEdge ? "rgba(52,211,153,.8)" : "rgba(42,61,90,.7)";
+    ctx.strokeStyle = isPathEdge ? "rgba(52,211,403,.8)" : "rgba(42,61,90,.7)";
     ctx.lineWidth   = isPathEdge ? 2 : 1;
     ctx.stroke();
   });

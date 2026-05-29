@@ -287,69 +287,193 @@ tr:hover td{background:rgba(94,184,250,.02);}
 .path-footer{margin-top:10px;padding:10px 14px;background:var(--s1);border:1px solid var(--bd);border-radius:var(--r);font-family:var(--mono);font-size:9px;color:var(--t2);display:flex;flex-wrap:wrap;gap:14px;}
 
 /* ─────────────────────────────
-   TREE VIEW
+   TREE VIEW — ÁRVORE REAL
 ───────────────────────────── */
 
 .tree-container{
 
+    padding:30px 20px;
+
+    overflow:auto;
+
+    min-height:600px;
+
+    background:
+        radial-gradient(circle at top,
+        rgba(94,184,250,.06),
+        transparent 45%);
+
     border:1px solid var(--bd);
 
-    border-radius:var(--rl);
-
-    background:var(--s1);
-
-    padding:18px;
-
-    overflow-y:auto;
-    overflow-x:hidden;
-
-    max-height:75vh;
-
-    display:flex;
-    flex-direction:column;
-
-    gap:22px;
+    border-radius:20px;
 }
 
-/* cada profundidade */
-.tree-level{
+/* UL principal */
+
+.tree-root,
+.tree-root ul{
+
+    position:relative;
+
+    padding-top:30px;
 
     display:flex;
 
-    flex-wrap:wrap;
+    justify-content:center;
 
-    gap:14px;
-
-    align-items:flex-start;
+    gap:28px;
 }
 
-/* nó */
+/* remove bullets */
+
+.tree-root ul{
+    padding-left:0;
+}
+
+.tree-root li{
+
+    list-style:none;
+
+    text-align:center;
+
+    position:relative;
+
+    padding:20px 8px 0 8px;
+}
+
+/* ───────── LINHAS ───────── */
+
+/* linha horizontal */
+
+.tree-root li::before,
+.tree-root li::after{
+
+    content:'';
+
+    position:absolute;
+
+    top:0;
+
+    right:50%;
+
+    width:50%;
+
+    height:20px;
+
+    border-top:1px solid var(--bd);
+}
+
+.tree-root li::after{
+
+    right:auto;
+
+    left:50%;
+
+    border-left:1px solid var(--bd);
+}
+
+/* remove linha esquerda primeiro filho */
+
+.tree-root li:first-child::before{
+    border:none;
+}
+
+/* remove linha direita último filho */
+
+.tree-root li:last-child::after{
+    border:none;
+}
+
+/* linha vertical */
+
+.tree-root li::before{
+
+    border-right:1px solid var(--bd);
+
+    border-radius:0 10px 0 0;
+}
+
+.tree-root li:last-child::before{
+
+    border-right:1px solid var(--bd);
+
+    border-radius:0 10px 0 0;
+}
+
+/* filhos */
+
+.tree-root ul::before{
+
+    content:'';
+
+    position:absolute;
+
+    top:0;
+
+    left:50%;
+
+    width:1px;
+
+    height:30px;
+
+    background:var(--bd);
+}
+
+/* ───────── NÓ ───────── */
+
 .tree-node{
 
-    width:220px;
+    position:relative;
 
-    background:var(--s2);
+    min-width:240px;
+
+    max-width:240px;
+
+    background:
+        linear-gradient(
+            180deg,
+            rgba(26,37,57,.95),
+            rgba(17,24,39,.98)
+        );
 
     border:1px solid var(--bd);
 
-    border-radius:14px;
+    border-radius:18px;
 
-    padding:12px;
+    padding:14px;
 
-    transition:.15s ease;
+    transition:.2s ease;
 
     box-shadow:
-        0 4px 18px rgba(0,0,0,.2);
+        0 10px 30px rgba(0,0,0,.35),
+        inset 0 1px 0 rgba(255,255,255,.03);
 }
 
 .tree-node:hover{
 
-    transform:translateY(-2px);
+    transform:
+        translateY(-4px)
+        scale(1.02);
 
     border-color:var(--accent);
+
+    box-shadow:
+        0 16px 35px rgba(94,184,250,.12);
+}
+
+/* nó objetivo */
+
+.tree-node.goal{
+
+    border-color:var(--grn);
+
+    box-shadow:
+        0 0 0 1px rgba(52,211,153,.2),
+        0 12px 30px rgba(52,211,153,.12);
 }
 
 /* topo */
+
 .tree-head{
 
     display:flex;
@@ -358,7 +482,7 @@ tr:hover td{background:rgba(94,184,250,.02);}
 
     align-items:center;
 
-    margin-bottom:8px;
+    margin-bottom:10px;
 }
 
 .tree-id{
@@ -368,6 +492,8 @@ tr:hover td{background:rgba(94,184,250,.02);}
     font-size:9px;
 
     color:var(--accent);
+
+    letter-spacing:1px;
 }
 
 .tree-f{
@@ -377,16 +503,27 @@ tr:hover td{background:rgba(94,184,250,.02);}
     font-size:9px;
 
     color:var(--yel);
+
+    background:rgba(251,191,36,.08);
+
+    border:1px solid rgba(251,191,36,.18);
+
+    border-radius:999px;
+
+    padding:2px 8px;
 }
 
 /* estado */
+
 .tree-state{
 
     background:rgba(255,255,255,.03);
 
-    border-radius:8px;
+    border:1px solid rgba(255,255,255,.04);
 
-    padding:8px;
+    border-radius:12px;
+
+    padding:10px;
 
     font-family:var(--mono);
 
@@ -394,38 +531,40 @@ tr:hover td{background:rgba(94,184,250,.02);}
 
     color:var(--t1);
 
-    line-height:1.6;
+    line-height:1.7;
 
-    margin-bottom:8px;
-
-    word-break:break-word;
+    margin-bottom:10px;
 }
 
 /* ação */
+
 .tree-action{
 
     font-size:9px;
 
     color:var(--t2);
 
-    line-height:1.5;
+    line-height:1.6;
 
-    margin-bottom:10px;
+    margin-bottom:12px;
+
+    min-height:32px;
 }
 
-/* métricas */
+/* badges */
+
 .tree-metrics{
 
     display:flex;
 
-    gap:6px;
-
     flex-wrap:wrap;
+
+    gap:6px;
 }
 
 .tree-badge{
 
-    padding:2px 8px;
+    padding:3px 8px;
 
     border-radius:999px;
 
@@ -433,33 +572,19 @@ tr:hover td{background:rgba(94,184,250,.02);}
 
     font-size:8px;
 
-    background:rgba(94,184,250,.08);
+    border:1px solid rgba(94,184,250,.16);
+
+    background:rgba(94,184,250,.07);
 
     color:var(--accent);
-
-    border:1px solid rgba(94,184,250,.18);
-}
-
-/* linhas entre níveis */
-.tree-arrow{
-
-    height:18px;
-
-    display:flex;
-
-    align-items:center;
-
-    justify-content:center;
-
-    color:var(--t3);
-
-    font-size:18px;
 }
 
 /* scrollbar */
+
 .tree-container::-webkit-scrollbar{
 
-    width:6px;
+    width:8px;
+    height:8px;
 }
 
 .tree-container::-webkit-scrollbar-thumb{
@@ -467,6 +592,84 @@ tr:hover td{background:rgba(94,184,250,.02);}
     background:var(--bd);
 
     border-radius:999px;
+}
+
+.tree-controls{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  margin-bottom:14px;
+  gap:12px;
+}
+
+.tree-btn-group{
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+
+.tree-ctrl-btn{
+  width:38px;
+  height:38px;
+  border:none;
+  border-radius:12px;
+  background:#111827;
+  color:#dbeafe;
+  font-size:18px;
+  font-weight:700;
+  cursor:pointer;
+  transition:.2s ease;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.04),
+    0 4px 12px rgba(0,0,0,.25);
+}
+
+.tree-ctrl-btn:hover{
+  transform:translateY(-2px);
+  background:#1e293b;
+  color:white;
+}
+
+.tree-ctrl-btn:active{
+  transform:scale(.96);
+}
+
+.tree-ctrl-btn.center{
+  background:#132a22;
+  color:#6ee7b7;
+}
+
+.tree-ctrl-btn.center:hover{
+  background:#163326;
+}
+
+.tree-ctrl-btn.reset{
+  background:#2a1f12;
+  color:#fbbf24;
+}
+
+.tree-ctrl-btn.reset:hover{
+  background:#3a2915;
+}
+
+.tree-stats{
+  font-family:var(--mono);
+  font-size:10px;
+  color:var(--t3);
+}
+
+.tree-container{
+  height:500px;
+  overflow:auto;
+  border:1px solid var(--bd);
+  border-radius:18px;
+  background:
+    radial-gradient(circle at top,#0f172a,#081018);
+  padding:20px;
+  scroll-behavior:smooth;
 }
 
 /* ── ASSETS MAX NOTICE ── */

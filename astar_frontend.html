@@ -1,31 +1,41 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
   <title>Portfolio de Investimentos - A*</title>
 
-  <link rel="stylesheet" href="/static/css/style.css">
+  <link rel="stylesheet" href="/static/css/style.css" />
 
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 
-    <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg" />
 
-    <link href="https://fonts.googleapis.com/css2?family=Red+Hat+Display:wght@300;400;500;700&display=swap" rel="stylesheet">
-
+  <link
+    href="https://fonts.googleapis.com/css2?family=Red+Hat+Display:wght@300;400;500;700&display=swap"
+    rel="stylesheet"
+  />
 </head>
+
 <body>
 
 <header>
   <div class="logo">
     <div class="logo-badge">A*</div>
+
     <div>
-      <div class="logo-text">Robo-Advisor · Rebalanceamento de Portfólio</div>
-      <div class="logo-sub">SI702 — Inteligência Artificial · UNICAMP FT</div>
+      <div class="logo-text">
+        Robo-Advisor · Rebalanceamento de Portfólio
+      </div>
+
+      <div class="logo-sub">
+        SI702 — Inteligência Artificial · UNICAMP FT
+      </div>
     </div>
   </div>
+
   <div class="hdr-pills">
     <div class="hdr-pill">A* Search</div>
     <div class="hdr-pill">Heurística Admissível vs Não-Admissível</div>
@@ -34,139 +44,386 @@
 
 <div class="app">
 
-<!-- ── SIDEBAR ── -->
-<aside class="sidebar">
+  <!-- ───────────────────────────── -->
+  <!-- SIDEBAR -->
+  <!-- ───────────────────────────── -->
 
-  <div class="card">
-    <div class="sec">Cenários de teste</div>
-    <div class="scenario-list" id="scenarioList">
-      <div style="font-family:var(--mono);font-size:10px;color:var(--t3);">Carregando…</div>
-    </div>
-  </div>
+  <aside class="sidebar">
 
-  <div class="card">
-    <div class="sec">Ativos <span style="font-size:8px;font-weight:400;color:var(--t3)">(máx. 20)</span></div>
-    <div id="assetList"></div>
-    <div id="maxNotice" class="max-notice" style="display:none">⚠ Limite de 20 ativos atingido</div>
-    <button class="add-btn" id="addAssetBtn" onclick="addAsset()">+ Adicionar ativo</button>
-    <div class="rand-row">
-      <button class="rand-btn" onclick="randomizeState('initial')" title="Gerar alocação inicial aleatória">⚡ Inicial aleatório</button>
-      <button class="rand-btn" onclick="randomizeState('target')" title="Gerar alocação alvo aleatória">⚡ Alvo aleatório</button>
-    </div>
-    <div class="sum-row">
-      <span id="initSum" class="ok">∑ Atual = 100%</span>
-      <span id="targSum" class="ok">∑ Alvo = 100%</span>
-    </div>
-  </div>
+    <div class="card">
+      <div class="sec">Cenários de teste</div>
 
-  <div class="card">
-    <div class="sec">Parâmetros</div>
-    <div class="fg">
-      <label>Valor do portfólio (R$)</label>
-      <input type="number" id="portfolioValue" value="10000" min="100"/>
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-      <div class="fg" style="margin-bottom:0">
-        <label>Unidade mínima (p.p.)</label>
-        <input type="number" id="unitPP" value="10" min="1" max="50"/>
-      </div>
-      <div class="fg" style="margin-bottom:0">
-        <label>Tolerância δ (p.p.)</label>
-        <input type="number" id="tolerance" value="0" min="0" max="20"/>
+      <div class="scenario-list" id="scenarioList">
+        <div style="font-family:var(--mono);font-size:10px;color:var(--t3);">
+          Carregando…
+        </div>
       </div>
     </div>
-  </div>
 
-  <div class="card">
-    <div class="sec">Heurística</div>
-    <div class="h-toggle">
-      <button class="h-btn adm" id="btnAdm" onclick="setHeuristic('admissible')">
-        ✓ Admissível<br><span style="font-size:8px;opacity:.8;font-family:var(--sans)">Manhattan (×0.5)</span>
+    <div class="card">
+
+      <div class="sec">
+        Ativos
+        <span style="font-size:8px;font-weight:400;color:var(--t3)">
+          (máx. 4)
+        </span>
+      </div>
+
+      <div id="assetList"></div>
+
+      <div id="maxNotice" class="max-notice" style="display:none">
+        ⚠ Limite de 4 ativos atingido
+      </div>
+
+      <button
+        class="add-btn"
+        id="addAssetBtn"
+        onclick="addAsset()"
+      >
+        + Adicionar ativo
       </button>
-      <button class="h-btn" id="btnNon" onclick="setHeuristic('non_admissible')">
-        ✗ Não-admissível<br><span style="font-size:8px;opacity:.8;font-family:var(--sans)">Superestima (×15)</span>
-      </button>
+
+      <div class="rand-row">
+        <button
+          class="rand-btn"
+          onclick="randomizeState('initial')"
+          title="Gerar alocação inicial aleatória"
+        >
+          ⚡ Inicial aleatório
+        </button>
+
+        <button
+          class="rand-btn"
+          onclick="randomizeState('target')"
+          title="Gerar alocação alvo aleatória"
+        >
+          ⚡ Alvo aleatório
+        </button>
+      </div>
+
+      <div class="sum-row">
+        <span id="initSum" class="ok">∑ Atual = 100%</span>
+        <span id="targSum" class="ok">∑ Alvo = 100%</span>
+      </div>
+
     </div>
-    <div class="h-info" id="heuristicInfo"></div>
-  </div>
 
-  <div>
-    <button class="run-btn primary" id="runBtn" onclick="runSimulation()">▶ Executar A*</button>
-    <button class="run-btn secondary" id="compareBtn" onclick="runCompare()">⇄ Comparar Heurísticas</button>
-  </div>
+    <div class="card">
 
-</aside>
+      <div class="sec">Parâmetros</div>
 
-<!-- ── MAIN ── -->
-<main class="main">
+      <div class="fg">
+        <label>Valor do portfólio (R$)</label>
 
-  <div class="port-vis">
-    <div class="port-block">
-      <div class="port-block-title"><div class="dot dot-blue"></div> Estado Inicial</div>
-      <div id="initBars"></div>
+        <input
+          type="number"
+          id="portfolioValue"
+          value="10000"
+          min="100"
+        />
+      </div>
+
+      <div
+        style="
+          display:grid;
+          grid-template-columns:1fr 1fr;
+          gap:8px;
+        "
+      >
+
+        <div class="fg" style="margin-bottom:0">
+          <label>Unidade mínima (p.p.)</label>
+
+          <input
+            type="number"
+            id="unitPP"
+            value="10"
+            min="1"
+            max="50"
+          />
+        </div>
+
+        <div class="fg" style="margin-bottom:0">
+          <label>Tolerância δ (p.p.)</label>
+
+          <input
+            type="number"
+            id="tolerance"
+            value="0"
+            min="0"
+            max="20"
+          />
+        </div>
+
+      </div>
     </div>
-    <div class="arrow-area">
-      <div class="arrow-icon">→</div>
-      <div class="arrow-label">A*</div>
-    </div>
-    <div class="port-block">
-      <div class="port-block-title"><div class="dot dot-green"></div> Estado Objetivo</div>
-      <div id="targBars"></div>
-    </div>
-  </div>
 
-  <div id="divAlert" class="div-alert no" style="display:none;">
-    <div class="div-icon" id="divIcon">◎</div>
+    <div class="card">
+
+      <div class="sec">Heurística</div>
+
+      <div class="h-toggle">
+
+        <button
+          class="h-btn adm"
+          id="btnAdm"
+          onclick="setHeuristic('admissible')"
+        >
+          ✓ Admissível
+          <br />
+
+          <span
+            style="
+              font-size:8px;
+              opacity:.8;
+              font-family:var(--sans)
+            "
+          >
+            Manhattan (×0.5)
+          </span>
+        </button>
+
+        <button
+          class="h-btn"
+          id="btnNon"
+          onclick="setHeuristic('non_admissible')"
+        >
+          ✗ Não-admissível
+          <br />
+
+          <span
+            style="
+              font-size:8px;
+              opacity:.8;
+              font-family:var(--sans)
+            "
+          >
+            Superestima (×40)
+          </span>
+        </button>
+
+      </div>
+
+      <div class="h-info" id="heuristicInfo"></div>
+
+    </div>
+
     <div>
-      <div class="div-title" id="divTitle">—</div>
-      <div class="div-body" id="divBody">—</div>
-      <div class="div-delta" id="divDelta"></div>
-    </div>
-  </div>
 
-  <div class="metrics">
-    <div class="metric"><div class="metric-label">Custo Total</div><div class="metric-val mv-green" id="mCost">—</div></div>
-    <div class="metric"><div class="metric-label">Nós Expandidos</div><div class="metric-val mv-yel" id="mNodes">—</div></div>
-    <div class="metric"><div class="metric-label">Transações</div><div class="metric-val mv-acc" id="mSteps">—</div></div>
-    <div class="metric"><div class="metric-label">Solução</div><div class="metric-val" id="mStatus">—</div></div>
-  </div>
+      <button
+        class="run-btn primary"
+        id="runBtn"
+        onclick="runSimulation()"
+      >
+        ▶ Executar A*
+      </button>
 
-  <div>
-    <div class="tabs">
-      <button class="tab active" onclick="switchTab('caminho',this)">Caminho Ótimo</button>
-      <button class="tab" onclick="switchTab('cmp',this)">Comparativo</button>
-      <button class="tab" onclick="switchTab('iter',this)">Open / Closed</button>
-      <button class="tab" onclick="switchTab('tree',this)">Árvore A*</button>
+      <button
+        class="run-btn secondary"
+        id="compareBtn"
+        onclick="runCompare()"
+      >
+        ⇄ Comparar Heurísticas
+      </button>
+
     </div>
 
-    <div id="tab-caminho" class="tab-content active">
-      <div id="pathContent">
-        <div class="empty"><div class="empty-icon">◎</div><p>Execute o algoritmo para ver o caminho ótimo</p></div>
+  </aside>
+
+  <!-- ───────────────────────────── -->
+  <!-- MAIN -->
+  <!-- ───────────────────────────── -->
+
+  <main class="main">
+
+    <div class="port-vis">
+
+      <div class="port-block">
+
+        <div class="port-block-title">
+          <div class="dot dot-blue"></div>
+          Estado Inicial
+        </div>
+
+        <div id="initBars"></div>
+
       </div>
-    </div>
 
-    <div id="tab-cmp" class="tab-content">
-      <div id="compareContent">
-        <div class="empty"><div class="empty-icon">◎</div><p>Clique em "Comparar Heurísticas" para ver a diferença</p></div>
+      <div class="arrow-area">
+        <div class="arrow-icon">→</div>
+        <div class="arrow-label">A*</div>
       </div>
-    </div>
 
-    <div id="tab-iter" class="tab-content">
-      <div id="iterContent">
-        <div class="empty"><div class="empty-icon">◎</div><p>Execute o algoritmo para ver as listas Open/Closed</p></div>
+      <div class="port-block">
+
+        <div class="port-block-title">
+          <div class="dot dot-green"></div>
+          Estado Objetivo
+        </div>
+
+        <div id="targBars"></div>
+
       </div>
+
     </div>
 
-    <div id="tab-tree" class="tab-content">
-      <div id="treeContent">
-        <div class="empty"><div class="empty-icon">◎</div><p>Execute o algoritmo para visualizar a árvore de busca</p></div>
+    <!-- ALERTA DIVERGÊNCIA -->
+
+    <div
+      id="divAlert"
+      class="div-alert no"
+      style="display:none;"
+    >
+
+      <div class="div-icon" id="divIcon">◎</div>
+
+      <div>
+        <div class="div-title" id="divTitle">—</div>
+        <div class="div-body" id="divBody">—</div>
+        <div class="div-delta" id="divDelta"></div>
       </div>
-    </div>
-  </div>
 
-</main>
+    </div>
+
+    <!-- MÉTRICAS -->
+
+    <div class="metrics">
+
+      <div class="metric">
+        <div class="metric-label">Custo Total</div>
+        <div class="metric-val mv-green" id="mCost">—</div>
+      </div>
+
+      <div class="metric">
+        <div class="metric-label">Nós Expandidos</div>
+        <div class="metric-val mv-yel" id="mNodes">—</div>
+      </div>
+
+      <div class="metric">
+        <div class="metric-label">Transações</div>
+        <div class="metric-val mv-acc" id="mSteps">—</div>
+      </div>
+
+      <div class="metric">
+        <div class="metric-label">Solução</div>
+        <div class="metric-val" id="mStatus">—</div>
+      </div>
+
+    </div>
+
+    <!-- TABS -->
+
+    <div>
+
+      <div class="tabs">
+
+        <button
+          class="tab active"
+          onclick="switchTab('caminho',this)"
+        >
+          Caminho Ótimo
+        </button>
+
+        <button
+          class="tab"
+          onclick="switchTab('cmp',this)"
+        >
+          Comparativo
+        </button>
+
+        <button
+          class="tab"
+          onclick="switchTab('iter',this)"
+        >
+          Open / Closed
+        </button>
+
+        <button
+          class="tab"
+          onclick="switchTab('tree',this)"
+        >
+          Árvore A*
+        </button>
+
+      </div>
+
+      <!-- CAMINHO -->
+
+      <div id="tab-caminho" class="tab-content active">
+
+        <div id="pathContent">
+
+          <div class="empty">
+            <div class="empty-icon">◎</div>
+
+            <p>
+              Execute o algoritmo para ver o caminho ótimo
+            </p>
+          </div>
+
+        </div>
+
+      </div>
+
+      <!-- COMPARAÇÃO -->
+
+      <div id="tab-cmp" class="tab-content">
+
+        <div id="compareContent">
+
+          <div class="empty">
+            <div class="empty-icon">◎</div>
+
+            <p>
+              Clique em "Comparar Heurísticas"
+              para ver a diferença
+            </p>
+          </div>
+
+        </div>
+
+      </div>
+
+      <!-- ITERAÇÕES -->
+
+      <div id="tab-iter" class="tab-content">
+
+        <div id="iterContent">
+
+          <div class="empty">
+            <div class="empty-icon">◎</div>
+
+            <p>
+              Execute o algoritmo para ver
+              as listas Open/Closed
+            </p>
+          </div>
+
+        </div>
+
+      </div>
+
+      <!-- ÁRVORE -->
+
+      <div id="tab-tree" class="tab-content">
+
+        <div id="treeWrapper">
+            <div class="empty">
+                <div class="empty-icon">◎</div>
+                <p>Execute o algoritmo para visualizar a árvore</p>
+            </div>
+        </div>
+
+      </div>
+
+    </div>
+
+  </main>
+
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
 <script src="/static/js/app.js"></script>
+
 </body>
 </html>

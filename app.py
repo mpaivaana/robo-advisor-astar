@@ -9,26 +9,23 @@ app = Flask(__name__, static_folder="static")
 # CUSTOS REAIS POR ATIVO (R$ por unidade de pp)
 # ─────────────────────────────────────────────
 ASSET_COSTS = {
-    "Tesouro Selic":  2.0,
-    "Tesouro IPCA":   3.0,
+    "Tesouro Selic":  1.0,
+    "Tesouro IPCA":   2.0,
     "IVVB11":         5.0,
     "BOVA11":         8.0,
-    "PETR4":         80.0,
-    "VALE3":         60.0,
-    "ITUB4":         45.0,
-    "BBDC4":         40.0,
-    "WEGE3":         55.0,
-    "MGLU3":         35.0,
-    "BTC":          120.0,
-    "ETH":           90.0,
-    "Dólar":         70.0,
-    "Ouro":          50.0,
-    "REIT":          25.0,
-    "FII HGLG11":    12.0,
-    "FII XPML11":    10.0,
-    "AMER3":         20.0,
-    "SUZB3":         30.0,
-    "EMBR3":         65.0,
+
+    "PETR4":         120.0,
+    "VALE3":         100.0,
+    "ITUB4":          90.0,
+
+    "BTC":           300.0,
+    "ETH":           220.0,
+
+    "Dólar":          70.0,
+    "Ouro":           60.0,
+
+    "FII HGLG11":     12.0,
+    "FII XPML11":     10.0,
 }
 DEFAULT_COST = 15.0
 
@@ -40,10 +37,7 @@ SCENARIOS = {
     "diverge_basico": {
         "label": "Divergência básica (3 ativos)",
         "description": (
-            "3 ativos com custos muito assimétricos: Tesouro Selic (R$2), "
-            "IVVB11 (R$5), PETR4 (R$80). "
-            "Admissível usa o caminho barato via Selic→IVVB11; "
-            "não-admissível pode escolher caminho mais caro."
+            "3 ativos com custos muito assimétricos."
         ),
         "assets": ["Tesouro Selic", "IVVB11", "PETR4"],
         "initial": [70, 20, 10],
@@ -52,12 +46,11 @@ SCENARIOS = {
         "tolerance": 0,
         "portfolio_value": 10000,
     },
+
     "diverge_intermediario": {
         "label": "Ativo intermediário armadilha",
         "description": (
-            "A* admissível descobre que passar por IVVB11 é mais barato "
-            "do que ir direto para VALE3 (R$60). "
-            "A não-admissível pode pular esse desvio e pagar mais."
+            "A* admissível encontra caminho mais barato."
         ),
         "assets": ["Tesouro IPCA", "BOVA11", "VALE3"],
         "initial": [80, 10, 10],
@@ -66,26 +59,11 @@ SCENARIOS = {
         "tolerance": 0,
         "portfolio_value": 15000,
     },
-    "diverge_quatro_ativos": {
-        "label": "4 ativos — máxima divergência",
-        "description": (
-            "Com 4 ativos e custos extremos (Selic R$2 vs BTC R$120), "
-            "há dezenas de rotas. A não-admissível (fator 15×) "
-            "frequentemente descarta o caminho ótimo."
-        ),
-        "assets": ["Tesouro Selic", "IVVB11", "PETR4", "BTC"],
-        "initial": [60, 20, 10, 10],
-        "target":  [10, 10, 20, 60],
-        "unit_pp": 10,
-        "tolerance": 0,
-        "portfolio_value": 20000,
-    },
+
     "sem_divergencia": {
         "label": "Sem divergência esperada (2 ativos)",
         "description": (
-            "Apenas 2 ativos — só existe um caminho possível. "
-            "Ambas as heurísticas chegam ao mesmo custo. "
-            "Use para contrastar com os cenários acima."
+            "Apenas 2 ativos — só existe um caminho possível."
         ),
         "assets": ["Tesouro Selic", "PETR4"],
         "initial": [90, 10],
@@ -107,18 +85,34 @@ def asset_cost(name: str, custom_costs: dict = None) -> float:
 # HEURÍSTICA
 # ─────────────────────────────────────────────
 HEURISTIC_FACTORS = {
-    "admissible":     0.5,
-    "non_admissible": 15.0,
+    "admissible": 0.5,
+    "non_admissible": 40.0,
 }
 
 
-def compute_heuristic(state, target, portfolio_value, unit_pp, asset_names, mode="admissible", custom_costs=None):
-    factor    = HEURISTIC_FACTORS.get(mode, 0.5)
-    c_min     = min(asset_cost(n, custom_costs) for n in asset_names)
-    total_dev = sum(abs(state[i] - target[i]) for i in range(len(state)))
-    estimated_steps = total_dev / (2 * unit_pp)
-    base = estimated_steps * c_min
-    return factor * base
+def compute_heuristic(
+    state,
+    target,
+    portfolio_value,
+    unit_pp,
+    asset_names,
+    mode="admissible",
+    custom_costs=None
+):
+
+    factor = HEURISTIC_FACTORS.get(mode, 0.5)
+
+    total = 0
+
+    for i in range(len(state)):
+
+        diff = abs(target[i] - state[i])
+
+        cost = asset_cost(asset_names[i], custom_costs)
+
+        total += diff * cost
+
+    return (total / unit_pp) * factor
 
 def expand_node(state, target, unit_pp, portfolio_value,
                 heuristic_mode, asset_names, custom_costs=None):
@@ -183,8 +177,7 @@ def expand_node(state, target, unit_pp, portfolio_value,
                     custom_costs
                 )
 
-                # poda heurística
-                if h > 10000:
+                if h > 50000:
                     continue
 
                 successors.append(
@@ -345,6 +338,11 @@ def run():
     mode          = data.get("heuristic_mode", "admissible")
     custom_costs  = data.get("custom_costs",   {})
 
+    if len(assets) > 4:
+        return jsonify({
+            "error": "Máximo de 4 ativos permitido"
+        }), 400
+
     if sum(initial) != 100 or sum(target) != 100:
         return jsonify({"error": "Alocações devem somar 100%"}), 400
 
@@ -365,6 +363,11 @@ def compare():
     unit_pp       = int(data.get("unit_pp",    10))
     tolerance     = int(data.get("tolerance",  0))
     custom_costs  = data.get("custom_costs",   {})
+
+    if len(assets) > 4:
+        return jsonify({
+            "error": "Máximo de 4 ativos permitido"
+        }), 400
 
     results = {}
     for mode in ("admissible", "non_admissible"):
