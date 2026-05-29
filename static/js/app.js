@@ -899,12 +899,6 @@ function renderTree(data){
 </div>
     <div class="tree-container" id="treeCanvasWrap">
       <canvas id="treeCanvas"></canvas>
-    </div>
-    <div class="tree-legend">
-      <div class="tree-legend-item"><div class="tl-dot" style="background:#5eb8fa"></div><span>Nó explorado</span></div>
-      <div class="tree-legend-item"><div class="tl-dot" style="background:#34d399"></div><span>Caminho ótimo</span></div>
-      <div class="tree-legend-item"><div class="tl-dot" style="background:#fbbf24"></div><span>Estado objetivo</span></div>
-      <div class="tree-legend-item"><div class="tl-dot" style="background:#a78bfa"></div><span>Nó inicial</span></div>
     </div>`;
 
   window._treeData = {nodeMap, edges, canvasW, canvasH};
