@@ -1,51 +1,203 @@
-"""
-Agente de Rebalanceamento A* —
-SI702 - Inteligência Artificial | UNICAMP FT
-"""
-
 import heapq
-import math
-from flask import Flask, request, jsonify
-from flask import send_from_directory
+from flask import Flask, request, jsonify, send_from_directory
 import os
+import random
 
 app = Flask(__name__, static_folder="static")
 
 # ─────────────────────────────────────────────
-# NÚCLEO DO AGENTE A*
+# CUSTOS REAIS POR ATIVO (R$ por unidade de pp)
 # ─────────────────────────────────────────────
+ASSET_COSTS = {
+    "Tesouro Selic":  2.0,
+    "Tesouro IPCA":   3.0,
+    "IVVB11":         5.0,
+    "BOVA11":         8.0,
+    "PETR4":         80.0,
+    "VALE3":         60.0,
+    "ITUB4":         45.0,
+    "BBDC4":         40.0,
+    "WEGE3":         55.0,
+    "MGLU3":         35.0,
+    "BTC":          120.0,
+    "ETH":           90.0,
+    "Dólar":         70.0,
+    "Ouro":          50.0,
+    "REIT":          25.0,
+    "FII HGLG11":    12.0,
+    "FII XPML11":    10.0,
+    "AMER3":         20.0,
+    "SUZB3":         30.0,
+    "EMBR3":         65.0,
+}
+DEFAULT_COST = 15.0
 
-def compute_heuristic(state, target, portfolio_value, cost_per_unit, unit_pp, mode="admissible"):
-    """
-    Admissível  : Distância de Manhattan Financeira com fator 1/2 (nunca superestima).
-    Não-admissível: Mesma fórmula sem o fator 1/2 (pode superestimar → A* não garante ótimo).
-    """
-    total_deviation = sum(abs(state[i] - target[i]) for i in range(len(state)))
-    monetary_deviation = (total_deviation / 100) * portfolio_value
-    c_min = cost_per_unit / (unit_pp * portfolio_value / 100)
 
-    if mode == "admissible":
-        return 0.5 * monetary_deviation * c_min
-    else:  
-        return 0.9 * monetary_deviation * c_min
+# ─────────────────────────────────────────────
+# CENÁRIOS PRÉ-CONFIGURADOS
+# ─────────────────────────────────────────────
+SCENARIOS = {
+    "diverge_basico": {
+        "label": "Divergência básica (3 ativos)",
+        "description": (
+            "3 ativos com custos muito assimétricos: Tesouro Selic (R$2), "
+            "IVVB11 (R$5), PETR4 (R$80). "
+            "Admissível usa o caminho barato via Selic→IVVB11; "
+            "não-admissível pode escolher caminho mais caro."
+        ),
+        "assets": ["Tesouro Selic", "IVVB11", "PETR4"],
+        "initial": [70, 20, 10],
+        "target":  [10, 20, 70],
+        "unit_pp": 10,
+        "tolerance": 0,
+        "portfolio_value": 10000,
+    },
+    "diverge_intermediario": {
+        "label": "Ativo intermediário armadilha",
+        "description": (
+            "A* admissível descobre que passar por IVVB11 é mais barato "
+            "do que ir direto para VALE3 (R$60). "
+            "A não-admissível pode pular esse desvio e pagar mais."
+        ),
+        "assets": ["Tesouro IPCA", "BOVA11", "VALE3"],
+        "initial": [80, 10, 10],
+        "target":  [10, 10, 80],
+        "unit_pp": 10,
+        "tolerance": 0,
+        "portfolio_value": 15000,
+    },
+    "diverge_quatro_ativos": {
+        "label": "4 ativos — máxima divergência",
+        "description": (
+            "Com 4 ativos e custos extremos (Selic R$2 vs BTC R$120), "
+            "há dezenas de rotas. A não-admissível (fator 15×) "
+            "frequentemente descarta o caminho ótimo."
+        ),
+        "assets": ["Tesouro Selic", "IVVB11", "PETR4", "BTC"],
+        "initial": [60, 20, 10, 10],
+        "target":  [10, 10, 20, 60],
+        "unit_pp": 10,
+        "tolerance": 0,
+        "portfolio_value": 20000,
+    },
+    "sem_divergencia": {
+        "label": "Sem divergência esperada (2 ativos)",
+        "description": (
+            "Apenas 2 ativos — só existe um caminho possível. "
+            "Ambas as heurísticas chegam ao mesmo custo. "
+            "Use para contrastar com os cenários acima."
+        ),
+        "assets": ["Tesouro Selic", "PETR4"],
+        "initial": [90, 10],
+        "target":  [50, 50],
+        "unit_pp": 10,
+        "tolerance": 0,
+        "portfolio_value": 10000,
+    },
+}
 
 
-def expand_node(state, target, unit_pp, cost_per_unit, portfolio_value, heuristic_mode):
-    """Gera sucessores válidos: transfere `unit_pp` de ativo i → ativo j."""
+def asset_cost(name: str, custom_costs: dict = None) -> float:
+    if custom_costs and name in custom_costs:
+        return float(custom_costs[name])
+    return ASSET_COSTS.get(name, DEFAULT_COST)
+
+
+# ─────────────────────────────────────────────
+# HEURÍSTICA
+# ─────────────────────────────────────────────
+HEURISTIC_FACTORS = {
+    "admissible":     0.5,
+    "non_admissible": 15.0,
+}
+
+
+def compute_heuristic(state, target, portfolio_value, unit_pp, asset_names, mode="admissible", custom_costs=None):
+    factor    = HEURISTIC_FACTORS.get(mode, 0.5)
+    c_min     = min(asset_cost(n, custom_costs) for n in asset_names)
+    total_dev = sum(abs(state[i] - target[i]) for i in range(len(state)))
+    estimated_steps = total_dev / (2 * unit_pp)
+    base = estimated_steps * c_min
+    return factor * base
+
+def expand_node(state, target, unit_pp, portfolio_value,
+                heuristic_mode, asset_names, custom_costs=None):
+
     successors = []
     n = len(state)
+
     for i in range(n):
+
+        if state[i] < unit_pp:
+            continue
+
         for j in range(n):
+
             if i == j:
                 continue
-            if state[i] >= unit_pp:
+
+            max_units = state[i] // unit_pp
+            cost_j = asset_cost(asset_names[j], custom_costs)
+
+            # ─────────────────────────────
+            # REDUÇÃO DE COMPLEXIDADE
+            # ─────────────────────────────
+
+            possible_units = [1]
+
+            if max_units >= 3:
+                possible_units.append(max_units // 2)
+
+            possible_units.append(max_units)
+
+            possible_units = sorted(set(possible_units))
+
+            # ─────────────────────────────
+            # GERAÇÃO DOS SUCESSORES
+            # ─────────────────────────────
+
+            for units in possible_units:
+
+                amount = units * unit_pp
+
                 new_state = list(state)
-                new_state[i] -= unit_pp
-                new_state[j] += unit_pp
+
+                new_state[i] -= amount
+                new_state[j] += amount
+
+                # evita negativos
+                if min(new_state) < 0:
+                    continue
+
                 new_state = tuple(new_state)
-                h = compute_heuristic(new_state, target, portfolio_value,
-                                      cost_per_unit, unit_pp, heuristic_mode)
-                successors.append((new_state, cost_per_unit, h, i, j))
+
+                step_cost = units * cost_j
+
+                h = compute_heuristic(
+                    new_state,
+                    target,
+                    portfolio_value,
+                    unit_pp,
+                    asset_names,
+                    heuristic_mode,
+                    custom_costs
+                )
+
+                # poda heurística
+                if h > 10000:
+                    continue
+
+                successors.append(
+                    (
+                        new_state,
+                        step_cost,
+                        h,
+                        i,
+                        j,
+                        amount
+                    )
+                )
+
     return successors
 
 
@@ -53,32 +205,29 @@ def is_goal(state, target, tolerance_pp):
     return all(abs(state[i] - target[i]) <= tolerance_pp for i in range(len(state)))
 
 
-def astar(
-    initial,
-    target,
-    asset_names,
-    portfolio_value,
-    cost_per_unit,
-    unit_pp,
-    tolerance_pp,
-    heuristic_mode="admissible",
-    max_iterations=500,
-):
-    """
-    Executa A* e retorna caminho ótimo + log completo de cada iteração.
-    Retorna dict com: path, iterations_log, open_list_snapshots, closed_list_snapshots,
-                      total_cost, nodes_expanded, solution_found
-    """
-    initial = tuple(initial)
+def astar(initial, target, asset_names, portfolio_value, unit_pp, tolerance_pp,
+          heuristic_mode="admissible", max_iterations=2000, custom_costs=None):
+
+    initial  = tuple(initial)
     target_t = tuple(target)
 
-    h0 = compute_heuristic(initial, target_t, portfolio_value, cost_per_unit, unit_pp, heuristic_mode)
-   
-    counter = 0  
-    heap = [(h0, counter, 0.0, initial, None, "Inicialização")]
-    open_map = {initial: (h0, 0.0)}  
-    closed = {}                        
-    parent = {initial: (None, "Inicialização", 0.0)}
+    if is_goal(initial, target_t, tolerance_pp):
+        return {
+            "solution_found": True,
+            "path": [{"state": list(initial), "action": "Portfólio já está no alvo", "g": 0.0}],
+            "total_cost": 0.0,
+            "nodes_expanded": 0,
+            "iterations_log": [],
+            "heuristic_mode": heuristic_mode,
+            "heuristic_factor": HEURISTIC_FACTORS.get(heuristic_mode, 0.5),
+        }
+
+    h0      = compute_heuristic(initial, target_t, portfolio_value, unit_pp, asset_names, heuristic_mode, custom_costs)
+    counter = 0
+    heap    = [(h0, counter, 0.0, initial, None, "Inicialização")]
+    open_map = {initial: (h0, 0.0)}
+    closed   = {}
+    parent   = {initial: (None, "Inicialização", 0.0)}
 
     iterations_log = []
     nodes_expanded = 0
@@ -90,12 +239,10 @@ def astar(
             continue
 
         closed[state] = g
-        print("OPEN SIZE:", len(open_map), "CLOSED SIZE:", len(closed))
         nodes_expanded += 1
 
         open_snapshot = [
-            {"state": list(s), "f": round(fv, 4), "g": round(gv, 4),
-             "h": round(fv - gv, 4)}
+            {"state": list(s), "f": round(fv, 4), "g": round(gv, 4), "h": round(fv - gv, 4)}
             for s, (fv, gv) in open_map.items() if s not in closed
         ]
         closed_snapshot = [
@@ -103,8 +250,26 @@ def astar(
             for s, gv in closed.items()
         ]
 
-        h_val = compute_heuristic(state, target_t, portfolio_value,
-                                  cost_per_unit, unit_pp, heuristic_mode)
+        h_val = compute_heuristic(state, target_t, portfolio_value, unit_pp, asset_names, heuristic_mode, custom_costs)
+        generated_children = []
+
+        successors = expand_node(
+            state,
+            target_t,
+            unit_pp,
+            portfolio_value,
+            heuristic_mode,
+            asset_names,
+            custom_costs
+        )
+
+        for new_state, step_cost, h_new, from_i, to_i, amount in successors:
+            generated_children.append({
+                "state": list(new_state),
+                "g": round(g + step_cost, 4),
+                "h": round(h_new, 4),
+                "f": round(g + step_cost + h_new, 4)
+            })
 
         iterations_log.append({
             "iteration": nodes_expanded,
@@ -112,16 +277,14 @@ def astar(
             "g": round(g, 4),
             "h": round(h_val, 4),
             "f": round(f, 4),
-            "action": action,
             "open_list": open_snapshot,
             "closed_list": closed_snapshot,
+            "generated_children": generated_children
         })
 
         if is_goal(state, target_t, tolerance_pp):
-
-            print("🎯 OBJETIVO ENCONTRADO!", state, "custo final:", g)
             path = []
-            cur = state
+            cur  = state
             while cur is not None:
                 par, act, gc = parent[cur]
                 path.append({"state": list(cur), "action": act, "g": round(gc, 4)})
@@ -129,41 +292,40 @@ def astar(
             path.reverse()
             return {
                 "solution_found": True,
-                "path": path,
-                "total_cost": round(g, 4),
+                "path":           path,
+                "total_cost":     round(g, 4),
                 "nodes_expanded": nodes_expanded,
                 "iterations_log": iterations_log,
                 "heuristic_mode": heuristic_mode,
+                "heuristic_factor": HEURISTIC_FACTORS.get(heuristic_mode, 0.5),
             }
 
-        for new_state, step_cost, h_new, from_i, to_i in expand_node(
-            state, target_t, unit_pp, cost_per_unit, portfolio_value, heuristic_mode
-        ):
+        for new_state, step_cost, h_new, from_i, to_i, amount in successors:
             new_g = g + step_cost
-
-            print("  vizinho:", new_state, "de", state, "custo:", new_g)
-
-            new_f = new_g + h_new
-            action_label = (
-                f"Vende {unit_pp}% {asset_names[from_i]} → "
-                f"Compra {unit_pp}% {asset_names[to_i]} (C=R${step_cost:.2f})"
-            )
-
             if new_state in closed and closed[new_state] <= new_g:
                 continue
-
+            new_f        = new_g + h_new
+            action_label = (
+                f"Vende {amount}pp {asset_names[from_i]} → "
+                f"Compra {amount}pp {asset_names[to_i]} (R${step_cost:.2f})"
+            )
             if new_state not in open_map or open_map[new_state][1] > new_g:
                 open_map[new_state] = (new_f, new_g)
-                parent[new_state] = (state, action_label, new_g)
+                parent[new_state]   = (state, action_label, new_g)
                 counter += 1
                 heapq.heappush(heap, (new_f, counter, new_g, new_state, state, action_label))
 
-    return {"solution_found": False, "nodes_expanded": nodes_expanded,
-            "iterations_log": iterations_log, "heuristic_mode": heuristic_mode}
+    return {
+        "solution_found": False,
+        "nodes_expanded": nodes_expanded,
+        "iterations_log": iterations_log,
+        "heuristic_mode": heuristic_mode,
+        "heuristic_factor": HEURISTIC_FACTORS.get(heuristic_mode, 0.5),
+    }
 
 
 # ─────────────────────────────────────────────
-# ROTAS FLASK
+# ROTAS
 # ─────────────────────────────────────────────
 
 @app.route("/")
@@ -173,54 +335,109 @@ def index():
 
 @app.route("/run", methods=["POST"])
 def run():
-    data = request.json
-    assets        = data.get("assets", ["RF", "PETR4"])
-    initial       = data.get("initial", [90, 10])
-    target        = data.get("target", [50, 50])
+    data          = request.json
+    assets        = data.get("assets",         ["Tesouro Selic", "PETR4"])
+    initial       = data.get("initial",        [90, 10])
+    target        = data.get("target",         [50, 50])
     portfolio_val = float(data.get("portfolio_value", 10000))
-    cost_per_unit = float(data.get("cost_per_unit", 15))
-    unit_pp       = int(data.get("unit_pp", 10))
-    tolerance     = int(data.get("tolerance", 2))
+    unit_pp       = int(data.get("unit_pp",    10))
+    tolerance     = int(data.get("tolerance",  0))
     mode          = data.get("heuristic_mode", "admissible")
+    custom_costs  = data.get("custom_costs",   {})
 
     if sum(initial) != 100 or sum(target) != 100:
         return jsonify({"error": "Alocações devem somar 100%"}), 400
-    if len(assets) != len(initial) or len(assets) != len(target):
-        return jsonify({"error": "Número de ativos inconsistente"}), 400
 
-    result = astar(
-        initial=initial,
-        target=target,
-        asset_names=assets,
-        portfolio_value=portfolio_val,
-        cost_per_unit=cost_per_unit,
-        unit_pp=unit_pp,
-        tolerance_pp=tolerance,
-        heuristic_mode=mode,
-    )
+    result = astar(initial=initial, target=target, asset_names=assets,
+                   portfolio_value=portfolio_val, unit_pp=unit_pp,
+                   tolerance_pp=tolerance, heuristic_mode=mode,
+                   custom_costs=custom_costs)
     return jsonify(result)
 
 
 @app.route("/compare", methods=["POST"])
 def compare():
-    """Roda admissível E não-admissível com os mesmos parâmetros e retorna ambos."""
-    data = request.json
+    data          = request.json
+    assets        = data.get("assets",         ["Tesouro Selic", "PETR4"])
+    initial       = data.get("initial",        [90, 10])
+    target        = data.get("target",         [50, 50])
+    portfolio_val = float(data.get("portfolio_value", 10000))
+    unit_pp       = int(data.get("unit_pp",    10))
+    tolerance     = int(data.get("tolerance",  0))
+    custom_costs  = data.get("custom_costs",   {})
+
     results = {}
     for mode in ("admissible", "non_admissible"):
-        data["heuristic_mode"] = mode
-        assets        = data.get("assets", ["RF", "PETR4"])
-        initial       = data.get("initial", [90, 10])
-        target        = data.get("target", [50, 50])
-        portfolio_val = float(data.get("portfolio_value", 10000))
-        cost_per_unit = float(data.get("cost_per_unit", 15))
-        unit_pp       = int(data.get("unit_pp", 10))
-        tolerance     = int(data.get("tolerance", 2))
-        results[mode] = astar(
-            initial=initial, target=target, asset_names=assets,
-            portfolio_value=portfolio_val, cost_per_unit=cost_per_unit,
-            unit_pp=unit_pp, tolerance_pp=tolerance, heuristic_mode=mode,
-        )
+        results[mode] = astar(initial=initial, target=target, asset_names=assets,
+                              portfolio_value=portfolio_val, unit_pp=unit_pp,
+                              tolerance_pp=tolerance, heuristic_mode=mode,
+                              custom_costs=custom_costs)
+    adm = results["admissible"]
+    non = results["non_admissible"]
+    diverged = (
+        adm.get("solution_found") and non.get("solution_found") and
+        adm["total_cost"] != non["total_cost"]
+    )
+    results["diverged"]       = diverged
+    results["cost_delta"]     = round(non.get("total_cost", 0) - adm.get("total_cost", 0), 4) if diverged else 0
+    results["suboptimal_pct"] = round(
+        (non["total_cost"] - adm["total_cost"]) / adm["total_cost"] * 100, 1
+    ) if diverged and adm["total_cost"] > 0 else 0
+
     return jsonify(results)
+
+@app.route("/random_state", methods=["POST"])
+def random_state():
+
+    data = request.json
+
+    n = int(data.get("n", 3))
+    unit_pp = int(data.get("unit_pp", 10))
+
+    n = max(2, min(20, n))
+
+    if 100 // unit_pp < n:
+        return jsonify({
+            "error": (
+                f"Com unidade de {unit_pp}pp "
+                f"não é possível gerar {n} ativos."
+            )
+        }), 400
+
+    remaining = 100
+    allocation = []
+
+    for i in range(n - 1):
+
+        max_possible = remaining - ((n - i - 1) * unit_pp)
+
+        value = random.randrange(
+            unit_pp,
+            max_possible + unit_pp,
+            unit_pp
+        )
+
+        allocation.append(value)
+
+        remaining -= value
+
+    allocation.append(remaining)
+
+    random.shuffle(allocation)
+
+    return jsonify({
+        "allocation": allocation
+    })
+
+
+@app.route("/scenarios", methods=["GET"])
+def get_scenarios():
+    return jsonify(SCENARIOS)
+
+
+@app.route("/asset_costs", methods=["GET"])
+def get_asset_costs():
+    return jsonify(ASSET_COSTS)
 
 
 if __name__ == "__main__":
